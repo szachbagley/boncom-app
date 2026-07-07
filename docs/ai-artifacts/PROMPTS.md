@@ -103,5 +103,7 @@ Let's develop the Data-access layer now, in server/src/data: The repository/quer
   of in the plan.
 
   We are now going to begin work on the frontend, but first, orient yourself. Review the following:
+  * The existing scaffolding in client/.
+  * The API reference at server/docs/API-REFERENCE.md
   * All the files in client/docs/. This includes rough storyboard skethces, view inventories, and data display shapes.
   * the client/prototype/ directory. This contains a prototype design bundle exported from Claude Design. IMPORTANT NOTE: the Claude Design bundle is a visual and structural reference, not code to adopt wholesale. We will strictly maintain conventions and standards documented in CLAUDE.md, using the design bundle ONLY as the design target. The prototype should not inform code architecture.
