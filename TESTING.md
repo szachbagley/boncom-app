@@ -553,3 +553,77 @@ divergence, rather than passing vacuously.
 - **The live-preview UI is not built here** — this feature only makes the calc callable and
   drift-proof from the client. Wiring form state → `EstimateCalcInput` → `centsToDisplay` is
   the edit-form feature.
+
+---
+
+## Dashboard screen
+
+**What it is:** the first real screen — estimates grouped by client under client-name
+headings, with sort/filter controls, a per-card actions menu (View/Edit/Delete), and all
+four states (data/loading/empty/error). Visual target:
+`client/prototype/project/prototype/Dashboard*.html`.
+
+### How to verify
+
+```bash
+cd client && npm test    # 16 dashboardGrouping tests + everything else (55 total)
+npm run build && npm run dev   # then drive it — see client/.claude/skills/verify/SKILL.md
+```
+
+### Happy path
+
+`useDashboardData` fetches `GET /api/estimates` and `GET /api/clients` in parallel;
+`buildDashboardGroups` (pure, TDD'd) joins `clientId → name`, filters by status/client,
+sorts within each group per the active sort mode, drops clients left with zero estimates,
+and orders the groups. Cards show project name + status badge only — no dollar amounts (the
+list endpoint returns no totals, by design). Clicking a card or its menu's "View estimate"
+opens the read-only detail (`/estimates/:id`); "Edit estimate" opens the edit form
+(`/estimates/:id/edit`); the per-client "+" opens create pre-selected to that client
+(`/estimates/new?clientId=`); "Delete estimate" opens a `ConfirmDialog` — confirming calls
+`DELETE /api/estimates/:id` then refetches.
+
+### Edge cases (all asserted in `dashboardGrouping.test.ts`, 16 tests)
+
+| Case | Expected behavior |
+|---|---|
+| A client has zero (remaining) estimates | that client is not shown |
+| Estimate references an unknown `clientId` | skipped defensively (FK guarantees this can't really happen) |
+| Sort: date updated / date created | descending by the respective ISO timestamp |
+| Sort: status | drafts before sent |
+| Sort: alphabetical | by project name; groups also ordered by client name |
+| Group order (non-alpha sorts) | by the group's most-recent date, descending — **status sort still orders groups by recency**, not by status, matching the design reference |
+| Status filter set is empty | shows **nothing** (empty means none, not all) |
+| Client filter set is empty | shows **all** clients (empty means all) — this asymmetry with the status filter is deliberate, matching the design reference's own behavior |
+
+### Verified live in a real browser (not just unit tests — see `client/.claude/skills/verify/SKILL.md`)
+
+Radix's dropdown/dialog triggers listen for real `pointerdown` events, so a synthetic
+`element.click()` silently does nothing — verifying this screen required driving actual
+clicks via Chrome's DevTools Protocol (Node's built-in `fetch`/`WebSocket`, no
+Puppeteer/Playwright dependency). Confirmed, against the real seeded backend:
+- **Sort** opens, selecting "Alphabetical" re-orders both groups and cards within groups,
+  and the subtitle updates live.
+- **Filter** opens; toggling "Sent" off immediately narrows the visible cards and **the
+  menu stays open** across the toggle (Radix closes a `CheckboxItem`'s menu by default on
+  select — prevented via `onSelect`, so multiple filters can be toggled in one interaction);
+  the subtitle gains "· filtered".
+- The card's **"…" menu** opens with View/Edit/Delete; **Delete** opens the confirmation
+  dialog with the correct project name interpolated into the message; **Cancel** closes it
+  without calling the delete endpoint (verified seed data was unchanged afterward).
+- **Loading, empty, and error states** were each verified for real by injecting a `fetch`
+  override via CDP before navigation (an unresolving promise / an empty array / a 500) —
+  not by faking or deleting real seed data.
+
+### Known limitations
+
+- **No `@testing-library/react` component tests** — consistent with the project so far;
+  glue (components/hooks/the view) is verified by actually driving the running app, not unit
+  tests in isolation, per CLAUDE.md's testing policy.
+- **Header controls render identically across all four states** (a deliberate simplification
+  from the design reference, which shows dimmed/disabled Sort and Filter "shells" during
+  loading). The real controls have no data dependency that would break during loading — the
+  client list is simply empty until the fetch resolves — so this was judged not worth
+  bespoke disabled-shell components.
+- **The per-client "+" and "Add estimate" both navigate to still-stub screens** — the create/
+  edit form and detail view are not built in this feature; the Dashboard's job here is only
+  to navigate to them correctly.

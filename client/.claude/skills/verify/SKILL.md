@@ -66,3 +66,67 @@ pkill -f "Google Chrome.*headless"  # in case a headless instance lingers
 - Screenshots only show what rendered — they won't catch a component that renders fine
   but calls the wrong data. Pair with a DOM/text check (`grep` the `--dump-dom` output)
   when verifying actual content, not just layout/tokens.
+
+## Driving real interactions (menus, dialogs, dropdowns)
+
+A static `--screenshot` only captures one load — it can't click anything, and **Radix
+triggers listen for real `pointerdown` events**, so a synthetic `element.click()` (e.g.
+via `--dump-dom` + injected JS) will NOT open a Radix `DropdownMenu`/`Dialog`. To
+actually drive clicks, use Chrome's DevTools Protocol (CDP) directly — no
+Playwright/Puppeteer dependency needed, just Node's built-in `fetch` + `WebSocket`
+(stable since Node 22):
+
+```bash
+CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+"$CHROME" --headless=new --disable-gpu --remote-debugging-port=9222 \
+  --window-size=1280,900 about:blank &
+sleep 2
+curl -s http://localhost:9222/json/version   # confirms CDP is up
+```
+
+Then a small Node script:
+1. `PUT http://localhost:9222/json/new?<url>` → returns `{ webSocketDebuggerUrl }`.
+2. `new WebSocket(webSocketDebuggerUrl)`, send JSON-RPC messages
+   `{ id, method, params }`; each response arrives as a message with a matching `id`.
+3. `Page.enable`, `Runtime.enable`, then per step:
+   - Find an element's center via `Runtime.evaluate` running
+     `el.getBoundingClientRect()`.
+   - Click it for real with `Input.dispatchMouseEvent` (`mousePressed` then
+     `mouseReleased` at those coordinates) — this fires genuine pointer events Radix
+     listens for, unlike `.click()`.
+   - `Page.captureScreenshot` (`format: 'png'`, base64) → write to a file, then `Read`
+     it.
+4. Close the tab/socket when done.
+
+This is the only way seen so far to verify a Radix-based interactive element (dropdown
+opens, checkbox toggles without closing the menu, dialog opens with the right
+interpolated content, Cancel safely closes without side effects) rather than just its
+closed/idle appearance.
+
+## Simulating loading/empty/error without touching real data
+
+To see a state that depends on the API behaving a particular way (empty list, a 500, a
+hang), don't delete/fake real seed data — inject a `fetch` override via CDP's
+`Page.addScriptToEvaluateOnNewDocument` **before** navigating, so it's in place before
+the app's first fetch:
+
+```js
+await send(ws, 'Page.addScriptToEvaluateOnNewDocument', {
+  source: `
+    window.fetch = new Proxy(window.fetch, {
+      apply(target, thisArg, args) {
+        const url = String(args[0]);
+        if (url.includes('/api/estimates')) {
+          return Promise.resolve(new Response('[]', { status: 200 })); // empty
+          // or: Response(JSON.stringify({error:'...'}), {status:500})  // error
+          // or: new Promise(() => {})                                  // hangs (loading)
+        }
+        return Reflect.apply(target, thisArg, args);
+      },
+    });
+  `,
+});
+await send(ws, 'Page.navigate', { url: 'http://localhost:5173/' });
+```
+Nothing about the real backend or seed data is touched; the override lives only in that
+one CDP-controlled tab.
