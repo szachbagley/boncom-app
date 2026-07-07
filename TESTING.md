@@ -191,3 +191,77 @@ in both the mapper unit tests and the integration suite.
 - **`quantity` is written as `String(quantity)`** (not a raw JS number) to avoid any
   float-formatting surprise landing in a DECIMAL column; this is a data-layer
   implementation detail, invisible to callers.
+
+---
+
+## Estimate service (business-logic orchestration)
+
+**What it is:** `server/src/services/estimates.ts` — fetches stored facts (an estimate +
+its line items) and runs them through the calculation module to attach computed totals
+("compute totals on read"); handles create/update as one logical operation; enforces the
+discount valid-combination invariant; manages the one-way status transition. Pure
+orchestration, no HTTP. Supporting pure rules live in `estimateRules.ts` (unit-tested,
+TDD) and typed errors in `errors.ts`.
+
+### How to verify
+
+```bash
+npm test                # unit: estimateRules.test.ts (no DB) + mappers + calculations
+docker compose up -d     # ensure local MySQL is running
+npm run test:integration # estimates.db.test.ts + repositories.db.test.ts, local Docker only
+```
+
+### Happy path
+
+`createEstimate` verifies the client exists, validates the discount, and inserts the
+estimate with its line items in one transaction, returning an `EstimateDetail` with
+computed `totals`. `getEstimate` fetches and attaches totals. `listEstimates` returns
+lightweight `EstimateSummary` rows (discount adapted to the `Discount` union, no
+`totals`/`lineItems` — avoids an N+1 line-item fetch per row for what's a list view).
+`updateEstimate` replaces the full estimate-level fields **and** the entire line-item set
+atomically, recomputing totals from the new numbers. `setEstimateStatus` is a dedicated,
+lightweight status-only transition that doesn't touch line items.
+
+The **$59.65 worked example** (2.5×1250 + 3×999 line items, 10% discount, 8.25% tax) is
+asserted end-to-end through `createEstimate`, proving the service correctly wires stored
+facts through the calc module — same numbers as the calculation module's own test.
+
+### Edge cases (all asserted)
+
+| Case | Expected behavior |
+|---|---|
+| No discount on create | `discount` is `undefined`, `totals.discountAmountCents` is `0` |
+| `updateEstimate` replaces line items | old line items are **gone**, not appended; totals reflect only the new set |
+| `updateEstimate` on an empty-array line-item replacement | valid — leaves zero line items, not an error (mirrors the data-layer function) |
+| `draft → sent` (create or transition) | allowed |
+| `sent → draft` (via `updateEstimate` or `setEstimateStatus`) | **rejected**; the estimate is verified fully unchanged afterward (status, project name, line items) |
+| `sent → sent`, `draft → draft` | allowed (no-op transitions) |
+| Zero-value discount (`0%` or `$0` off) | valid, not an error — just a no-op discount |
+
+### Error scenarios
+
+- **`NotFoundError`** — thrown by `createEstimate` when `clientId` doesn't reference an
+  existing client. The service pre-checks with `getClientById` rather than letting a raw
+  FK constraint violation (`ER_NO_REFERENCED_ROW_2`) propagate — translates a DB-level
+  concern into a clean domain error before the future route layer maps it to a 404.
+- **`ValidationError`** — thrown for: a discount with a negative or non-integer numeric
+  value; an invalid `sent → draft` status transition. The classic "discount type set
+  without value" bad state is not a runtime check at all — it's **inexpressible** at the
+  service's API boundary, because the public discount type is the calc module's
+  `Discount` union, not two loose nullable fields.
+- **"Not found" vs. "invalid" convention:** operating on a nonexistent id (`getEstimate`,
+  `updateEstimate`, `setEstimateStatus`) returns `null`, mirroring the data layer's
+  existing convention — it is not treated as exceptional. A business rule violated on a
+  request that *does* target a real entity throws.
+
+### Known limitations
+
+- **`listEstimates` has no computed totals.** If a list view later needs them, that's a
+  follow-up (likely a joined/aggregated query), not solved here.
+- **`clientId` is immutable after creation** — `updateEstimate`'s input has no `clientId`
+  field; reassigning an estimate to a different client isn't supported.
+- **No granular line-item service functions** — only the bulk-replace shape is exposed by
+  the service (symmetric with create). The data layer's granular `lineItems.ts` functions
+  remain available for a future feature (e.g. inline per-line editing) but are unused here.
+- **`deleteEstimate` has no status restriction** — a `sent` estimate can be deleted the
+  same as a `draft` one; not requested, not added.

@@ -13,6 +13,7 @@ import {
   getEstimateById,
   listEstimates,
   updateEstimate,
+  updateEstimateWithLineItems,
 } from './estimates.js';
 import {
   createLineItem,
@@ -160,6 +161,38 @@ describe('estimates repository (aggregate root)', () => {
 
     const draft = await listEstimates({ clientId: testClientId, status: 'draft' });
     expect(draft.some((e) => e.id === createdEstimateIds[0])).toBe(true);
+  });
+
+  it('updateEstimateWithLineItems atomically replaces estimate fields AND the entire line-item set', async () => {
+    const estimate = await createEstimate({
+      clientId: testClientId,
+      projectName: 'Bulk Replace Target',
+      status: 'draft',
+      taxRateBasisPoints: 0,
+      lineItems: [
+        { description: 'Original line A', quantity: 1, rateCents: 1000 },
+        { description: 'Original line B', quantity: 2, rateCents: 2000 },
+      ],
+    });
+    createdEstimateIds.push(estimate.id);
+    expect(estimate.lineItems).toHaveLength(2);
+
+    const replaced = await updateEstimateWithLineItems(
+      estimate.id,
+      { projectName: 'Renamed via bulk replace', taxRateBasisPoints: 500 },
+      [{ description: 'Replacement line', quantity: 3, rateCents: 3000 }],
+    );
+    expect(replaced?.projectName).toBe('Renamed via bulk replace');
+    expect(replaced?.taxRateBasisPoints).toBe(500);
+    expect(replaced?.lineItems).toHaveLength(1); // old two are GONE, not appended
+    expect(replaced?.lineItems[0]?.description).toBe('Replacement line');
+
+    const reReplaced = await updateEstimateWithLineItems(
+      estimate.id,
+      {},
+      [], // empty array is valid: leaves the estimate with zero line items, not an error
+    );
+    expect(reReplaced?.lineItems).toHaveLength(0);
   });
 });
 
