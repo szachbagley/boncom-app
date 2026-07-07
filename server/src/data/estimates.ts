@@ -1,0 +1,115 @@
+import { db } from './db.js';
+import { mapEstimateRow, mapLineItemRow } from './mappers.js';
+import type {
+  CreateEstimateInput,
+  Estimate,
+  EstimateRow,
+  EstimateStatus,
+  EstimateWithLineItems,
+  LineItemRow,
+  UpdateEstimateInput,
+} from './types.js';
+
+/**
+ * Estimate repository: pure data access over the `estimates` table. Estimate is the
+ * aggregate root — `createEstimate` may atomically insert initial line items in one
+ * transaction, and `getEstimateById` returns the estimate with its ordered line
+ * items. Granular line-item edits after creation go through the line-item repository
+ * (`lineItems.ts`); `updateEstimate` here only touches estimate-level columns.
+ */
+
+export interface EstimateListFilter {
+  clientId?: number;
+  status?: EstimateStatus;
+}
+
+export async function createEstimate(
+  input: CreateEstimateInput,
+): Promise<EstimateWithLineItems> {
+  const id = await db.transaction(async (trx) => {
+    const [estimateId] = await trx<EstimateRow>('estimates').insert({
+      client_id: input.clientId,
+      status: input.status ?? 'draft',
+      tax_rate_basis_points: input.taxRateBasisPoints ?? 0,
+      discount_type: input.discountType ?? null,
+      discount_value: input.discountValue ?? null,
+    });
+    if (estimateId === undefined) {
+      throw new Error('createEstimate: insert did not return an id');
+    }
+
+    const lineItems = input.lineItems ?? [];
+    if (lineItems.length > 0) {
+      await trx<LineItemRow>('line_items').insert(
+        lineItems.map((item) => ({
+          estimate_id: estimateId,
+          description: item.description,
+          quantity: String(item.quantity),
+          rate_cents: item.rateCents,
+        })),
+      );
+    }
+
+    return estimateId;
+  });
+
+  const created = await getEstimateById(id);
+  if (!created) {
+    throw new Error('createEstimate: inserted estimate not found');
+  }
+  return created;
+}
+
+export async function getEstimateById(id: number): Promise<EstimateWithLineItems | null> {
+  const row = await db<EstimateRow>('estimates').where({ id }).first();
+  if (!row) {
+    return null;
+  }
+  const lineRows = await db<LineItemRow>('line_items')
+    .where({ estimate_id: id })
+    .orderBy('id', 'asc'); // insertion order
+  return { ...mapEstimateRow(row), lineItems: lineRows.map(mapLineItemRow) };
+}
+
+export async function listEstimates(filter: EstimateListFilter = {}): Promise<Estimate[]> {
+  const query = db<EstimateRow>('estimates');
+  if (filter.clientId !== undefined) {
+    query.where({ client_id: filter.clientId });
+  }
+  if (filter.status !== undefined) {
+    query.where({ status: filter.status });
+  }
+  const rows = await query.orderBy('updated_at', 'desc').orderBy('id', 'desc'); // last edited first
+  return rows.map(mapEstimateRow);
+}
+
+export async function updateEstimate(
+  id: number,
+  patch: UpdateEstimateInput,
+): Promise<EstimateWithLineItems | null> {
+  const update: Partial<EstimateRow> = {};
+  if (patch.clientId !== undefined) {
+    update.client_id = patch.clientId;
+  }
+  if (patch.status !== undefined) {
+    update.status = patch.status;
+  }
+  if (patch.taxRateBasisPoints !== undefined) {
+    update.tax_rate_basis_points = patch.taxRateBasisPoints;
+  }
+  if (patch.discountType !== undefined) {
+    update.discount_type = patch.discountType; // null clears the discount
+  }
+  if (patch.discountValue !== undefined) {
+    update.discount_value = patch.discountValue;
+  }
+  if (Object.keys(update).length > 0) {
+    await db<EstimateRow>('estimates').where({ id }).update(update);
+  }
+  return getEstimateById(id);
+}
+
+export async function deleteEstimate(id: number): Promise<boolean> {
+  const affected = await db<EstimateRow>('estimates').where({ id }).del(); // line_items cascade
+  return affected > 0;
+}

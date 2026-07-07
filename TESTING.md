@@ -126,3 +126,66 @@ inputs by design.
   standalone `discountAmountCents` returns the raw requested amount.
 - **Formatting is not here.** Cents → `"$12.34"` is presentation (frontend), never this
   module. The module returns integers only.
+
+---
+
+## Data-access layer (Knex repositories)
+
+**What it is:** pure data access over the three entities — `server/src/data/clients.ts`,
+`estimates.ts`, `lineItems.ts` — plus shared `db.ts` (one Knex instance), `types.ts`
+(domain/row/input types), and `mappers.ts` (pure row→domain conversion). No HTTP, no
+business logic; routes/services (a later feature) call these.
+
+### How to verify
+
+```bash
+npm test                # unit: mappers.test.ts (no DB) + calculations
+docker compose up -d     # ensure local MySQL is running
+npm run test:integration # repositories.db.test.ts — real queries, local Docker only
+```
+
+### Happy path
+
+`createEstimate` inserts an estimate and its initial line items in one transaction;
+`getEstimateById` returns the estimate with line items in insertion order; `updateEstimate`
+touches estimate-level columns only (line items are untouched); `listEstimates` filters by
+`clientId` and/or `status`. Client and line-item CRUD are the straightforward create /
+read / list / update / delete per repository.
+
+### Edge cases / driver facts (verified against the live DB, not assumed)
+
+| Column | SQL type | JS type returned |
+|---|---|---|
+| `rate_cents`, `discount_value` | `BIGINT` | **`number`** (not a string — corrects an earlier assumption; see DECISIONS) |
+| `quantity` | `DECIMAL(12,3)` | **`string`** (e.g. `"2.500"`) — converted to `number` in `mapLineItemRow` |
+| `created_at` / `updated_at` | `TIMESTAMP` | `Date` |
+
+- **Fractional quantity round-trip:** `quantity: 2.5` written, read back as the number
+  `2.5` (via the DECIMAL-string mapper), asserted in both the unit mapper test and the
+  integration create→read test.
+- **No line items on create:** `lineItems` omitted → `estimate.lineItems` is `[]`, not an
+  error.
+- **No discount:** both `discountType`/`discountValue` map to `null`, not omitted keys.
+
+### Error scenarios
+
+- **`client_id` FK is `RESTRICT`:** deleting a client that still has estimates throws (the
+  raw DB error propagates un-caught, for the service layer to translate to a 4xx later).
+  Asserted with `expect(deleteClient(id)).rejects.toThrow()`.
+- **`estimate_id` FK is `CASCADE`:** deleting an estimate removes its line items;
+  asserted by checking `listLineItemsByEstimate` is empty afterward.
+- Repositories do not catch or reinterpret DB errors — that is a deliberate boundary
+  (data layer stays "pure data access"); the service layer will map errors to HTTP
+  semantics in a later feature.
+
+### Known limitations
+
+- **Integration tests share the local dev database.** They are self-contained (a
+  throwaway `__dal_test__<timestamp>` client) and self-cleaning (`afterAll` deletes
+  everything they created, in child→parent order), verified to leave seed row counts
+  unchanged. They are not run against Railway.
+- **No pagination/cursor support yet** on `listClients` / `listEstimates` — fine at
+  current scale; a future extension if estimate volume grows.
+- **`quantity` is written as `String(quantity)`** (not a raw JS number) to avoid any
+  float-formatting surprise landing in a DECIMAL column; this is a data-layer
+  implementation detail, invisible to callers.
