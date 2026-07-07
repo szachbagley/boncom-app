@@ -29,3 +29,16 @@ The app supports discounts in the form of percentages AND fixed amounts, whiched
 Client is its own entity, rather than just a field for the estimate; I thought sorting by client would be an important feature.
 Totals are derived every time, not stored in the database, so they don't have any risk of drifting. The query optimization that'd come from storing totals isn't beneficial enough here.
 Deleting a Client is restricted while estimates exist; all of a client's estimates must be deleted before that client can be deleted (don't let a client deletion silently destroy estimate history). 
+
+## Migrations & schema tooling
+I chose Knex for migrations and seeding. Migrations are the source of truth for the schema — I develop and apply them against the local Docker MySQL, and later apply the same migrations to Railway manually by pointing Knex at the public URL. The Knex config reads the connection from a single DATABASE_URL env var (never hardcoded), so the same migrate command targets either database just by swapping the connection string. I verified that Node's built-in `process.loadEnvFile()` doesn't override an env var that's already set, so `DATABASE_URL=$MYSQL_PUBLIC_URL npm run migrate` cleanly targets Railway without the local .env clobbering it.
+
+I avoided a dotenv dependency and used Node's built-in `process.loadEnvFile()` instead. One gotcha: the Knex CLI changes the working directory to the knexfile's folder before loading it, so a cwd-relative .env lookup missed server/.env. I load .env from a path relative to the config file itself, which fixes it for both the tsx (src) and compiled (dist) cases.
+
+## Schema mechanics
+Table names are plural snake_case (clients, estimates, line_items). For each foreign key I declare the index explicitly BEFORE the FK on the same column, so InnoDB reuses that index instead of creating a redundant second one — the result is exactly one index per FK column. updated_at auto-updates at the DB level via ON UPDATE CURRENT_TIMESTAMP, so "last edited" stays correct even if a writer forgets to set it. line_items cascade-delete with their estimate (orphaned lines are meaningless).
+
+## Seeding
+The seed is local-only and idempotent (delete children→parents, then re-insert). I added a safety guard that refuses to run unless DATABASE_URL points at localhost, so it can never accidentally seed Railway. The sample data is chosen to exercise every calculation edge case for the upcoming calc module: fractional quantities, both discount types, no discount, zero/nonzero tax, a fixed discount larger than the subtotal (clamp-to-zero), and an empty estimate. One known tradeoff: auto-increment ids climb across re-runs, so ids aren't stable — the data content is, which is all a dev seed needs.
+
+Forward note: mysql2 returns BIGINT columns as JS strings by default (to avoid precision loss). The data/models layer (a later feature) will decide how to marshal cents back to numbers — our values stay well within Number.MAX_SAFE_INTEGER.
