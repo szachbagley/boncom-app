@@ -1,4 +1,6 @@
 Users / authentication / multi-tenancy.
+Accessibility and performanc audit with Chrom DevTools (Lighthouse)
+Nielsen UI heuristics evaluation
 Client detail fields beyond name (email, address, company).
 Line item reordering (position column).
 Soft deletes / archiving (hard delete with cascade is used).
