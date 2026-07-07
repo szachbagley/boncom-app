@@ -497,3 +497,59 @@ npm run dev              # then drive it in a browser — see client/.claude/ski
   typed fetch functions only, per this feature's scope.
 - **No `@testing-library/react`** — no components are rendered/tested yet; arrives with the
   first screen-testing feature.
+
+---
+
+## Shared calculation module (server ↔ client mirror)
+
+**What it is:** the pure estimate-calc module is now usable by the frontend for live totals
+preview, using the exact same logic the backend uses authoritatively. `server/src/calculations/estimate.ts`
+is the canonical source of record; `client/src/calculations/estimate.ts` is a byte-identical
+mirror, kept in sync by an automated drift guard rather than by convention. See
+`client/src/calculations/README.md` and the DECISIONS.md entry for the why.
+
+### How to verify
+
+```bash
+cd server && npm test    # 28 calc tests + the drift guard (estimate.sync.test.ts)
+cd client && npm test    # the SAME 28 calc tests (mirrored) + the drift guard + formatters
+```
+
+### Happy path
+
+- The client imports and executes the identical module: `client/src/calculations/estimate.test.ts`
+  is a verbatim copy of the server's test and runs under the client's own Vitest, so the
+  frontend independently proves it computes the same results (incl. the `$59.65` worked
+  example) — that is the concrete evidence "the frontend can call `calculateEstimate(input) ->
+  EstimateTotals`."
+- The module keeps returning integer cents and does no formatting; dollar/percent formatting
+  stays in `client/src/utils/format.ts`. The mirror preserves this verbatim.
+
+### The drift guard (the key mechanism)
+
+`estimate.sync.test.ts` exists in **both** packages. Each reads the other package's copy and
+asserts `estimate.ts` and `estimate.test.ts` are **byte-identical** to its own. Because it
+runs in both `npm test` suites, a divergence fails CI regardless of which suite runs — drift
+can't reach `main` green.
+
+**Proven to have teeth (not just present):** during the build, a single trailing space was
+appended to one copy → **both** drift guards went red (server: 1 failed; client: 1 failed);
+reverting restored both to green. This negative test confirms the guard actually catches
+divergence, rather than passing vacuously.
+
+### Edge cases / known limitations
+
+| Case | Behavior |
+|---|---|
+| Someone hand-edits the client copy | both drift guards fail on the next `npm test` |
+| Someone edits the canonical file but forgets to re-copy | both drift guards fail |
+| Whitespace-only difference | still fails (byte-equality, not semantic) — forces a deliberate re-copy |
+
+- **Re-sync is manual** (a documented `cp` command in `client/src/calculations/README.md`),
+  by design — there's no build step that regenerates the copy, so the guard, not a
+  generator, is the safety net. If the two ever need to legitimately differ, that's a signal
+  the sharing approach should be revisited (e.g. migrate to workspaces), not that the guard
+  should be relaxed.
+- **The live-preview UI is not built here** — this feature only makes the calc callable and
+  drift-proof from the client. Wiring form state → `EstimateCalcInput` → `centsToDisplay` is
+  the edit-form feature.
