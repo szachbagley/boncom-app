@@ -419,3 +419,81 @@ the package.
   this isn't needed. Revisit if auth is added later.
 - **No rate-limiting, Helmet, or other security headers** beyond CORS — out of scope for
   this feature.
+
+---
+
+## Frontend foundation
+
+**What it is:** the pre-screens groundwork in `client/src/` — Tailwind v4 configured from
+the Claude Design bundle's tokens, a typed `api/` layer mirroring
+`server/docs/API-REFERENCE.md`, shared money/percent formatters, and the app shell +
+routing. No screen content (Dashboard cards, estimate forms, dialogs) — every route renders
+a stub view.
+
+### How to verify
+
+```bash
+cd client
+npm test               # unit: format.test.ts (no DOM, no network)
+npm run build           # tsc -b && vite build
+npm run dev              # then drive it in a browser — see client/.claude/skills/verify/
+```
+
+### Happy path
+
+- **Tokens:** the bundle's palette/type/spacing tokens live in `styles/theme.css`
+  (Tailwind `@theme`, generates real utilities) and `styles/base.css` (semantic aliases +
+  element defaults, plain `:root` vars). Verified by building and inspecting the actual
+  output CSS for token values, and by forcing `rounded-*`/`shadow-*` utilities into a
+  temporary probe to confirm they resolve to `0px`/`none` — Tailwind v4 tree-shakes unused
+  theme vars, so a plain grep for the override isn't sufficient on its own.
+- **`api/`:** 8 functions (`getClients`, `createClient`, `getEstimates`, `getEstimate`,
+  `createEstimate`, `updateEstimate`, `patchEstimateStatus`, `deleteEstimate`) built on one
+  `request<T>()` + `ApiError`. Verified by `tsc -b` plus a manual line-by-line cross-check
+  of every function against `API-REFERENCE.md` (method, path, request/response shape) —
+  **not** a live call against the running backend, since nothing invokes this layer yet
+  (see Known limitations).
+- **Formatters (`utils/format.ts`):** `centsToDisplay`/`basisPointsToPercent`, built
+  test-first. 9 unit tests cover the canonical `$59.65` example, zero, sub-10-cent leading
+  zeros, whole-dollar padding, thousands separators, and percent trailing-zero trimming
+  (`1000` bp → `"10%"`, not `"10.00%"`).
+- **Shell + routing:** `App.tsx` is the shell (static header + `<Routes>`); 4 stub views
+  (`DashboardView`, `EstimateDetailView`, `EstimateFormView` — shared by create and edit,
+  differentiated by the `:id` route param — and `NotFoundView`) across
+  `/`, `/estimates/new`, `/estimates/:id`, `/estimates/:id/edit`, and a catch-all. Verified
+  live in a browser (headless Chrome screenshots) — all 5 routes render distinct content,
+  no console errors, and the Open Sans webfont request actually fires.
+
+### Edge cases (asserted)
+
+| Case | Expected behavior |
+|---|---|
+| `centsToDisplay(0)` | `"$0.00"` |
+| `centsToDisplay(5)` | `"$0.05"` (leading zero, not `"$.05"`) |
+| `centsToDisplay(100000)` | `"$1,000.00"` (thousands separator) |
+| `basisPointsToPercent(1000)` | `"10%"` (no trailing `.00`) |
+| `basisPointsToPercent(50)` | `"0.5%"` (one decimal, not zero-padded to two) |
+| Any non-2xx API response | `api/http.ts` throws `ApiError`, including 404 — no function returns `null` |
+| Unmatched frontend route | renders the app's own `NotFoundView`, not a raw error page |
+
+### Error scenarios
+
+- **`ApiError`** carries `status` and optional `details` (mirroring the backend's
+  `{ error, details? }` shape) so a future hooks layer can branch on status code.
+- Malformed/non-JSON error bodies are tolerated: `request<T>()` catches a failed
+  `response.json()` and falls back to a generic message rather than throwing an unrelated
+  parse error.
+
+### Known limitations
+
+- **The `api/` layer is not runtime-verified against the live backend in this feature.**
+  Nothing in this feature calls it (no hooks, no screens) — genuine end-to-end verification
+  happens naturally in the next feature when real UI code invokes these functions. Stated
+  plainly rather than implying a check that didn't happen.
+- **No owned component code yet** (not even `Button`) — by explicit scope decision, this
+  feature installs and justifies the Radix primitives (`Dialog`, `Select`, `DropdownMenu`)
+  but builds none of them. The first screen feature that needs a component builds it then.
+- **No `hooks/` layer, no data-fetching/caching library** — deferred; the api layer is raw
+  typed fetch functions only, per this feature's scope.
+- **No `@testing-library/react`** — no components are rendered/tested yet; arrives with the
+  first screen-testing feature.

@@ -1,0 +1,91 @@
+/* Semantic aliases — reference these (not raw palette vars) in hand-written CSS/components.
+   Not inside @theme: these namespaces aren't Tailwind-recognized, so they wouldn't generate
+   utilities anyway; used via arbitrary-value classes, e.g. border-[var(--border-hairline)]. */
+:root {
+  /* Surfaces */
+  --surface-page: var(--color-white);
+  --surface-card: var(--color-white);
+  --surface-subtle: var(--color-neutral-50);
+  --surface-hover: var(--color-neutral-100);
+
+  /* Text */
+  --text-primary: var(--color-ink);
+  --text-heading: var(--color-navy);
+  --text-secondary: var(--color-neutral-500);
+  --text-muted: var(--color-mute);
+  --text-on-dark: var(--color-white);
+  --text-link: var(--color-cyan);
+  --text-link-hover: var(--color-navy);
+
+  /* Lines */
+  --border-hairline: var(--color-neutral-200);
+  --border-strong: var(--color-neutral-300);
+  --border-focus: var(--color-cyan);
+
+  /* Interaction */
+  --action-primary: var(--color-navy);
+  --action-primary-hover: #001630;
+  --action-accent: var(--color-cyan);
+  --action-accent-hover: #4FB4C8;
+  --action-emphasis: var(--color-orange);
+
+  /* Letter spacing / line height — not Tailwind namespaces; used via arbitrary values */
+  --ls-hero: -1.4px;
+  --ls-display: -1px;
+  --ls-heading: -0.4px;
+  --ls-label: 5.6px;
+  --ls-nav: 2.3px;
+  --lh-tight: 1.1;
+  --lh-heading: 1.25;
+  --lh-body: 1.67;
+
+  /* Motion — calm, no bounce */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--surface-page);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  line-height: var(--lh-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text-heading);
+  margin: 0 0 var(--spacing-4);
+  line-height: var(--lh-heading);
+}
+h1 { font-size: var(--text-h1); font-weight: 300; letter-spacing: var(--ls-display); }
+h2 { font-size: var(--text-h2); font-weight: 300; letter-spacing: var(--ls-heading); }
+h3 { font-size: var(--text-h3); font-weight: 600; }
+
+p { margin: 0 0 var(--spacing-4); }
+p:last-child { margin-bottom: 0; }
+
+a {
+  color: var(--text-link);
+  text-decoration: none;
+  transition: color var(--dur-fast) var(--ease-standard);
+}
+a:hover { color: var(--text-link-hover); }
+
+strong, b { font-weight: 700; }
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--border-hairline);
+  margin: var(--spacing-6) 0;
+}
+
+::selection {
+  background: var(--color-cyan);
+  color: var(--color-navy);
+}
