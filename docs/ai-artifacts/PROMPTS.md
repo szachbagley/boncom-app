@@ -93,3 +93,5 @@ Follow server/docs/DATA-MODEL.md as the source of truth for the schema, and CLAU
 First write the plan to docs/schema-implementation.md in phases and numbered steps and stop
 for my review. Do NOT write migration or seed code until I approve the plan. Develop this on
 a feature branch.
+
+Let's develop the estimate calculation module, following the normal development workflow, with test driven development -- make sure to invoke the estimate-calculations skill. Install and setup Vitest to use for tests.
