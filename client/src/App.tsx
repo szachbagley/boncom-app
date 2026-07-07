@@ -1,70 +1,26 @@
-import { useEffect, useState } from 'react';
-import { API_BASE_URL } from './config';
-
-interface HealthResponse {
-  status: string;
-  timestamp: string;
-}
-
-type FetchState =
-  | { kind: 'loading' }
-  | { kind: 'success'; data: HealthResponse }
-  | { kind: 'error'; message: string };
+import { Route, Routes } from 'react-router-dom';
+import { DashboardView } from './views/DashboardView';
+import { EstimateDetailView } from './views/EstimateDetailView';
+import { EstimateFormView } from './views/EstimateFormView';
+import { NotFoundView } from './views/NotFoundView';
 
 export function App() {
-  const [state, setState] = useState<FetchState>({ kind: 'loading' });
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function checkHealth(): Promise<void> {
-      try {
-        const response = await fetch(`${API_BASE_URL}/health`);
-        if (!response.ok) {
-          throw new Error(`Backend responded with ${response.status}`);
-        }
-        const data = (await response.json()) as HealthResponse;
-        if (!cancelled) {
-          setState({ kind: 'success', data });
-        }
-      } catch (err) {
-        if (!cancelled) {
-          const message =
-            err instanceof Error ? err.message : 'Unknown error';
-          setState({ kind: 'error', message });
-        }
-      }
-    }
-
-    void checkHealth();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   return (
-    <main style={{ fontFamily: 'system-ui, sans-serif', padding: '2rem' }}>
-      <h1>Boncom Estimates</h1>
-      <p>
-        Backend connectivity check against <code>{API_BASE_URL}/health</code>
-      </p>
-
-      {state.kind === 'loading' && <p>Checking backend…</p>}
-
-      {state.kind === 'success' && (
-        <div style={{ color: 'green' }}>
-          <p>✓ Backend reachable</p>
-          <p>status: {state.data.status}</p>
-          <p>timestamp: {state.data.timestamp}</p>
-        </div>
-      )}
-
-      {state.kind === 'error' && (
-        <div style={{ color: 'crimson' }}>
-          <p>✗ Could not reach backend</p>
-          <p>{state.message}</p>
-        </div>
-      )}
-    </main>
+    <div className="min-h-screen bg-white">
+      <header className="border-b border-[var(--border-hairline)] px-6 py-5">
+        <h1 className="m-0 text-h2 font-light tracking-[var(--ls-heading)] text-navy">
+          Boncom Estimates
+        </h1>
+      </header>
+      <main>
+        <Routes>
+          <Route path="/" element={<DashboardView />} />
+          <Route path="/estimates/new" element={<EstimateFormView />} />
+          <Route path="/estimates/:id" element={<EstimateDetailView />} />
+          <Route path="/estimates/:id/edit" element={<EstimateFormView />} />
+          <Route path="*" element={<NotFoundView />} />
+        </Routes>
+      </main>
+    </div>
   );
 }
