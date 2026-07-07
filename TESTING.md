@@ -265,3 +265,80 @@ facts through the calc module — same numbers as the calculation module's own t
   remain available for a future feature (e.g. inline per-line editing) but are unused here.
 - **`deleteEstimate` has no status restriction** — a `sent` estimate can be deleted the
   same as a `draft` one; not requested, not added.
+
+---
+
+## API routes (Express + Zod)
+
+**What it is:** the HTTP layer — `server/src/routes/` (`clients.ts`, `estimates.ts`,
+`schemas.ts`, `asyncHandler.ts`, `errorHandler.ts`) plus a thin `services/clients.ts`.
+Handlers are intentionally thin: parse the request, validate with Zod, call exactly one
+service function, map the result to a response. No business logic or DB calls live here.
+
+### How to verify
+
+```bash
+npm test                # unit: route tests (service mocked, supertest) + everything else
+docker compose up -d     # ensure local MySQL is running
+npm run build && node dist/server.js   # then curl the endpoints below manually
+```
+
+### Happy path
+
+```
+GET  /api/clients                    -> 200 [Client]
+POST /api/clients        {name}      -> 201 Client
+GET  /api/estimates       ?clientId= &status=   -> 200 [EstimateSummary]
+POST /api/estimates       {..., lineItems:[...]} -> 201 EstimateDetail
+GET  /api/estimates/:id              -> 200 EstimateDetail | 404
+PUT  /api/estimates/:id   {full body, complete lineItems}  -> 200 EstimateDetail | 404
+PATCH /api/estimates/:id/status {status} -> 200 EstimateDetail | 404
+DELETE /api/estimates/:id            -> 204 | 404
+```
+
+Verified end-to-end against the real stack (Docker MySQL, built server, real HTTP): the
+estimate-calculations skill's worked example — `2.5×1250` + `3×999` line items, 10%
+discount, 8.25% tax — created via `POST /api/estimates` returned
+**`totals.grandTotalCents: 5965`** ($59.65), proving the full chain (route → Zod → service
+→ data → calc module) end-to-end, not just against mocks. The created estimate was deleted
+afterward and seed row counts were confirmed unchanged.
+
+### Edge cases / money rules enforced at the edge (all asserted)
+
+| Input | Result |
+|---|---|
+| `rateCents` negative | 400 (money must be a non-negative integer) |
+| `quantity` with >3 decimal places (e.g. `1.2345`) | 400 (exceeds `DECIMAL(12,3)`) |
+| `discount: { type: 'percentage', amountCents: 5 }` (wrong key for the type) | 400 — the discriminated union makes this shape unparseable, not just logically invalid |
+| `status` query/body value outside `'draft' \| 'sent'` | 400 |
+| non-numeric `:id` path param | 400 (`idParam` coercion fails) |
+| `name`/`projectName`/`description` empty or whitespace-only | 400 (`trim().min(1)`) |
+
+### Error scenarios
+
+- **`ZodError` → 400** with `{ error: 'Validation failed', details: <field errors> }` —
+  field-level detail per CLAUDE.md's validation requirement.
+- **`ValidationError` (from the service) → 400** with `{ error: message }` — e.g. the
+  `sent → draft` status-transition rule. Verified live: `PATCH .../status` from `sent` to
+  `draft` returns 400 with the service's own message.
+- **`NotFoundError` (from the service) → 404`** with `{ error: message }` — e.g.
+  `POST /api/estimates` with an unknown `clientId`. Verified live.
+- **Missing entity (`null` from the service) → 404** `{ error: 'Estimate not found' }` on
+  `GET`/`PUT`/`PATCH status`/`DELETE`.
+- **Anything else → 500** `{ error: 'Internal Server Error' }`, logged server-side, never
+  leaking internal/DB detail.
+
+### Known limitations
+
+- **Route tests mock the service layer** (supertest against the real Express app, but the
+  estimate/client service functions are `vi.mock`ed) — they assert the HTTP contract
+  (status codes, validation, delegation, error mapping), not business logic, which the
+  service's own test suites already cover. The Phase-4 manual smoke test is what proves the
+  real end-to-end chain.
+- **No granular line-item endpoints** — line items are nested-only; the entire array is
+  sent on create/update (bulk replace). Matches the service layer exactly.
+- **Clients: list + create only** — no get-by-id, update, or delete endpoints in this
+  feature.
+- **No pagination, auth, or rate-limiting** on any endpoint — out of scope.
+- **Dates serialize as ISO strings** in JSON responses (standard `JSON.stringify(Date)`
+  behavior) — not a special formatting step, just how the shapes cross the wire.

@@ -1,6 +1,9 @@
 import express from 'express';
 import cors from 'cors';
 import { getHealthStatus } from './services/health.js';
+import { clientsRouter } from './routes/clients.js';
+import { estimatesRouter } from './routes/estimates.js';
+import { errorHandler } from './routes/errorHandler.js';
 
 /**
  * Builds the Express application: middleware + routes, no network binding.
@@ -22,19 +25,12 @@ export function createApp(): express.Express {
     }
   });
 
-  // Centralized error handler. Logs full detail server-side; never leaks
-  // internal detail to the client.
-  app.use(
-    (
-      err: unknown,
-      _req: express.Request,
-      res: express.Response,
-      _next: express.NextFunction,
-    ) => {
-      console.error(err);
-      res.status(500).json({ error: 'Internal Server Error' });
-    },
-  );
+  app.use('/api/clients', clientsRouter);
+  app.use('/api/estimates', estimatesRouter);
+
+  // Centralized error handler (registered last). Maps typed service/validation
+  // errors to status codes; logs full detail server-side; never leaks internals.
+  app.use(errorHandler);
 
   return app;
 }
