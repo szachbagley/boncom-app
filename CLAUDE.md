@@ -67,12 +67,8 @@ Do not run multiple steps in one pass or "get ahead" — the point is reviewable
 
 **4. Land via PR.** When a feature's steps are complete and green, open a pull request
 with a short description: what the feature does and the one or two key decisions behind it
-(this is where reasoning becomes visible to reviewers). Squash-merge into `main` to keep
-history clean. The implementation-plan file is committed with the feature (it's an
+(this is where reasoning becomes visible to reviewers). I will then manually merge into `main`. The implementation-plan file is committed with the feature (it's an
 artifact, not scratch).
-
-**5. Confirm the deploy.** After merge, verify the auto-deploy succeeded and `main` is
-still live before starting the next feature.
 
 Keep this lightweight — short branches, self-reviewed PRs, concise descriptions. The goal
 is a readable, narrated history and a deployable `main`, not process ceremony.
