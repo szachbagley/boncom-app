@@ -23,3 +23,9 @@ Test driven development (failing unit tests before code) for services with real 
 
 ## AI Workflow
 To accelerate development with Claude Code while mainting control and quality, I followed a strict process of generating detailed plans, implementing in small steps, and commiting to feature branches to be merged with main upon feature completion. Details in CLAUDE.md. 
+
+## Data modeling
+The app supports discounts in the form of percentages AND fixed amounts, whiched required some creative data modeling; in the schema, the discount table has two columns: type + value, with type being an edum of "percentage" and "fixed". This does allow the database to hold data representing invalid states, but we protect against that with Zod validation.
+Client is its own entity, rather than just a field for the estimate; I thought sorting by client would be an important feature.
+Totals are derived every time, not stored in the database, so they don't have any risk of drifting. The query optimization that'd come from storing totals isn't beneficial enough here.
+Deleting a Client is restricted while estimates exist; all of a client's estimates must be deleted before that client can be deleted (don't let a client deletion silently destroy estimate history). 
