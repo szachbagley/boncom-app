@@ -627,3 +627,78 @@ Puppeteer/Playwright dependency). Confirmed, against the real seeded backend:
 - **The per-client "+" and "Add estimate" both navigate to still-stub screens** — the create/
   edit form and detail view are not built in this feature; the Dashboard's job here is only
   to navigate to them correctly.
+
+---
+
+## Estimate detail (read-only) view
+
+**What it is:** the estimate read-only screen — line items, the totals block (subtotal/
+discount/tax/total, rendered from the API's `totals` object, never recomputed), draft-vs-
+sent affordances, and the Send/Delete confirmation flows. Visual target:
+`client/prototype/project/prototype/Estimate-{Draft,Sent,Loading,Error}.html`. First screen
+to actually call `centsToDisplay`/`basisPointsToPercent`.
+
+### How to verify
+
+```bash
+cd client && npm test    # 6 estimateDisplay tests + everything else (61 total)
+npm run build && npm run dev   # then drive it — see client/.claude/skills/verify/SKILL.md
+```
+
+### Happy path
+
+`useEstimateDetail` fetches `GET /api/estimates/:id` and `GET /api/clients` in parallel
+(resolving the client name, same pattern as the Dashboard). `pairLineItemsWithTotals` (pure,
+TDD'd) zips `lineItems` with the parallel `totals.lineTotalsCents` array by position — this
+is the actual proof each line's displayed dollar amount is the right one, not just *a*
+plausible one. `TotalsBlock` renders all four rows unconditionally from the totals object.
+Draft shows Edit/Send estimate/Delete estimate; Sent shows only Delete — **the affordances
+are hidden client-side**, not just rejected server-side, satisfying the stated requirement.
+Edit navigates to `/estimates/:id/edit`; Send opens a confirmation dialog that, on confirm,
+calls `patchEstimateStatus` and then `refetch()`s so the now-sent state (hidden Edit/Send)
+reflects without a page reload; Delete opens a confirmation dialog that, on confirm, deletes
+and navigates to `/`.
+
+### Edge cases (asserted in `estimateDisplay.test.ts`, 6 tests, and verified live)
+
+| Case | Expected behavior |
+|---|---|
+| `discount.type === 'percentage'` | Discount row shows `(X%)` |
+| `discount.type === 'fixed'` | Discount row shows the dollar amount, **no** percentage note |
+| No discount at all (`discount` is `undefined`) | Discount row still renders, as `$0.00`, no note — a deliberate choice (confirmed with the user) to derive all four total rows unconditionally from the same `totals` object rather than conditionally hide one |
+| Line item count doesn't match `lineTotalsCents` length | `pairLineItemsWithTotals` **throws** — a real contract violation must be loud, never a silently mis-paired dollar figure |
+| A fixed discount larger than the subtotal | Verified live against real seed data (an estimate with a $500 fixed discount on a $20 subtotal): Discount row correctly clamps to `-$20.00` and Tax computes as `$0.00` on the zeroed base — the calc module's clamp-to-zero behavior flowing correctly all the way to the display |
+
+### Verified live in a real browser (`client/.claude/skills/verify/SKILL.md`)
+
+Against the real seeded backend: viewed a **sent + percentage-discount** estimate (only
+Delete present, `(10%)` note shown, totals matched the calc module's own canonical `$59.65`
+worked example exactly), a **sent + fixed-discount** estimate (only Delete, no percentage
+note), a **draft + no-discount** estimate (`$0.00` discount row, Edit/Send/Delete all
+present), and a **draft + fixed-discount** estimate (the clamp-to-zero case above). Verified
+the **loading skeleton** and a **404 error** (`Estimate not found`, the real backend message,
+with working "Try again"/"Back to estimates" actions). Drove the **Send** confirmation
+end-to-end (dialog copy, confirm, observed the affordances disappear live) and the **Delete**
+confirmation twice: once with **Cancel** (verified the target estimate was completely
+unchanged afterward) and once for real against a **disposable estimate created via the API
+specifically for this test** (confirmed it navigated to `/` and the estimate was gone from
+the Dashboard) — never a real seeded record for the irreversible path.
+
+### Known limitations
+
+- **One seeded estimate was accidentally sent-and-restored during verification.** Clicking
+  "Send" for real on a seeded estimate to test the confirmation flow is just as irreversible
+  as a delete (the one-way status rule) — unlike Delete, no throwaway was used for this one.
+  Fixed by re-running the idempotent seed script afterward (confirmed restored to the
+  canonical 3 clients / 6 estimates). Lesson captured in the verify skill: any irreversible
+  action needs a throwaway or a planned reseed, not just deletes.
+- **A malformed `:id` route param is not specially guarded** — `Number('abc')` → `NaN` →
+  the api layer's request still fires → the backend's Zod validation rejects it with 400 →
+  the normal error path renders, with a working way back. Not a crash, just an unremarkable
+  error path; not worth dedicated client-side route validation for this feature.
+- **`EstimateDetailError` is a second, separate component from the Dashboard's
+  `DashboardError`**, not a shared abstraction — they differ in copy and secondary action,
+  and this is only the second occurrence of the pattern. Flagged as a candidate for
+  extraction if a third occurrence appears (likely the create/edit form).
+- **No `@testing-library/react` component tests** — consistent with the project so far;
+  verified by actually driving the running app instead.
