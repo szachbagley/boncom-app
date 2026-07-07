@@ -2,6 +2,7 @@ import { db } from './db.js';
 import { mapEstimateRow, mapLineItemRow } from './mappers.js';
 import type {
   CreateEstimateInput,
+  CreateLineItemInput,
   Estimate,
   EstimateRow,
   EstimateStatus,
@@ -116,4 +117,55 @@ export async function updateEstimate(
 export async function deleteEstimate(id: number): Promise<boolean> {
   const affected = await db<EstimateRow>('estimates').where({ id }).del(); // line_items cascade
   return affected > 0;
+}
+
+/**
+ * Atomically replaces an estimate's estimate-level fields AND its entire line-item
+ * set (delete-all-then-reinsert) in one transaction. Used by the service's bulk-replace
+ * update flow. `patch` fields are all optional (only supplied ones are updated);
+ * `lineItems` is the COMPLETE new set — this is not a partial line-item patch.
+ */
+export async function updateEstimateWithLineItems(
+  id: number,
+  patch: UpdateEstimateInput,
+  lineItems: CreateLineItemInput[],
+): Promise<EstimateWithLineItems | null> {
+  await db.transaction(async (trx) => {
+    const update: Partial<EstimateRow> = {};
+    if (patch.clientId !== undefined) {
+      update.client_id = patch.clientId;
+    }
+    if (patch.projectName !== undefined) {
+      update.project_name = patch.projectName;
+    }
+    if (patch.status !== undefined) {
+      update.status = patch.status;
+    }
+    if (patch.taxRateBasisPoints !== undefined) {
+      update.tax_rate_basis_points = patch.taxRateBasisPoints;
+    }
+    if (patch.discountType !== undefined) {
+      update.discount_type = patch.discountType;
+    }
+    if (patch.discountValue !== undefined) {
+      update.discount_value = patch.discountValue;
+    }
+    if (Object.keys(update).length > 0) {
+      await trx<EstimateRow>('estimates').where({ id }).update(update);
+    }
+
+    await trx<LineItemRow>('line_items').where({ estimate_id: id }).del();
+    if (lineItems.length > 0) {
+      await trx<LineItemRow>('line_items').insert(
+        lineItems.map((item) => ({
+          estimate_id: id,
+          description: item.description,
+          quantity: String(item.quantity),
+          rate_cents: item.rateCents,
+        })),
+      );
+    }
+  });
+
+  return getEstimateById(id);
 }
