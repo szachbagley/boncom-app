@@ -39,6 +39,7 @@ interface LineItemSeed {
 }
 
 interface EstimateSeed {
+  projectName: string;
   status: 'draft' | 'sent';
   tax_rate_basis_points: number; // integer basis points (8.25% -> 825)
   discount_type: 'percentage' | 'fixed' | null;
@@ -62,6 +63,7 @@ async function insertEstimate(
 ): Promise<void> {
   const [estimateId] = await knex('estimates').insert({
     client_id: clientId,
+    project_name: estimate.projectName,
     status: estimate.status,
     tax_rate_basis_points: estimate.tax_rate_basis_points,
     discount_type: estimate.discount_type,
@@ -99,6 +101,7 @@ export async function seed(knex: Knex): Promise<void> {
   // E1 — canonical example from the estimate-calculations skill (grand total $59.65).
   // sent; 8.25% tax; 10% percentage discount; fractional quantity.
   await insertEstimate(knex, acme, {
+    projectName: 'Spring Brand Refresh',
     status: 'sent',
     tax_rate_basis_points: 825,
     discount_type: 'percentage',
@@ -111,6 +114,7 @@ export async function seed(knex: Knex): Promise<void> {
 
   // E2 — draft; zero tax; no discount.
   await insertEstimate(knex, acme, {
+    projectName: 'Q3 Social Campaign',
     status: 'draft',
     tax_rate_basis_points: 0,
     discount_type: null,
@@ -123,6 +127,7 @@ export async function seed(knex: Knex): Promise<void> {
 
   // E3 — sent; 7% tax; $50 fixed discount; fractional quantity.
   await insertEstimate(knex, globex, {
+    projectName: 'Product Launch Film',
     status: 'sent',
     tax_rate_basis_points: 700,
     discount_type: 'fixed',
@@ -136,6 +141,7 @@ export async function seed(knex: Knex): Promise<void> {
   // E4 — draft; 8.25% tax; $500 fixed discount that EXCEEDS the subtotal
   // (1 x $20.00 = $2,000c). Exercises the clamp-to-zero path.
   await insertEstimate(knex, globex, {
+    projectName: 'Website Redesign',
     status: 'draft',
     tax_rate_basis_points: 825,
     discount_type: 'fixed',
@@ -148,6 +154,7 @@ export async function seed(knex: Knex): Promise<void> {
   // E5 — sent; 5% tax; 15% percentage discount; DECIMAL(12,3) quantities that
   // produce fractional cents per line (exercises per-line half-up rounding).
   await insertEstimate(knex, initech, {
+    projectName: 'Annual Report 2026',
     status: 'sent',
     tax_rate_basis_points: 500,
     discount_type: 'percentage',
@@ -160,6 +167,7 @@ export async function seed(knex: Knex): Promise<void> {
 
   // E6 — draft; no line items. Exercises the empty-estimate (subtotal 0) path.
   await insertEstimate(knex, initech, {
+    projectName: 'Trade Show Booth',
     status: 'draft',
     tax_rate_basis_points: 0,
     discount_type: null,

@@ -150,7 +150,9 @@ npm run test:integration # repositories.db.test.ts — real queries, local Docke
 `getEstimateById` returns the estimate with line items in insertion order; `updateEstimate`
 touches estimate-level columns only (line items are untouched); `listEstimates` filters by
 `clientId` and/or `status`. Client and line-item CRUD are the straightforward create /
-read / list / update / delete per repository.
+read / list / update / delete per repository. `projectName` (required on create, optional
+on update/rename) is part of the estimate create/read/update round-trip and is asserted
+in both the mapper unit tests and the integration suite.
 
 ### Edge cases / driver facts (verified against the live DB, not assumed)
 
