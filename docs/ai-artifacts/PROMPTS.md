@@ -95,3 +95,11 @@ for my review. Do NOT write migration or seed code until I approve the plan. Dev
 a feature branch.
 
 Let's develop the estimate calculation module, following the normal development workflow, with test driven development -- make sure to invoke the estimate-calculations skill. Install and setup Vitest to use for tests.
+
+Let's develop the Data-access layer now, in server/src/data: The repository/query functions over Knex for the three entities —
+  create/read/update/delete estimates, their line items, and clients. Pure data access, no HTTP, no business logic. From now on, be more
+  detailed in your implemenatation plan documents; don't just describe what needs to be done for each step; elaborate on how you will
+  implement it. The excution of the plan should not require any sort of strategizing or decision-making; that should all be taken care
+  of in the plan.
+
+  
