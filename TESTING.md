@@ -702,3 +702,88 @@ the Dashboard) — never a real seeded record for the irreversible path.
   extraction if a third occurrence appears (likely the create/edit form).
 - **No `@testing-library/react` component tests** — consistent with the project so far;
   verified by actually driving the running app instead.
+
+---
+
+## Estimate create/edit form
+
+**What it is:** the form for creating and editing estimates — client picker (+ Add New
+Client), project name, editable line items, discount %/$ toggle, tax rate, and LIVE
+totals computed via the shared calc module. One component (`EstimateFormView`) serves
+create, create-with-preselected-client, and edit, differentiated by route/query param.
+Visual target: `client/prototype/project/prototype/Estimate-{Edit,Create}.html`.
+
+### How to verify
+
+```bash
+cd client && npm test    # 53 new tests (money.ts + estimateForm.ts) + everything else (114 total)
+npm run build && npm run dev   # then drive it — see client/.claude/skills/verify/SKILL.md
+```
+
+### Happy path
+
+`useEstimateFormData(id)` fetches clients (+ the estimate, in edit mode) in parallel.
+`formStateFromEstimate` / `emptyFormState` initialize form state once per identity
+(`id` or `'new'`); `emptyFormState` accepts an optional preselected `clientId` (from the
+Dashboard's per-client "+", via `?clientId=`). Every keystroke recomputes
+`totals = calculateEstimate(buildCalcInput(form))` in a `useMemo` — no debounce, since
+this is pure synchronous computation, not I/O — and renders through the same
+`TotalsBlock` component the read-only detail view uses. Save validates via
+`validateForm`; on success, create calls `POST /api/estimates` and edit calls
+`PUT /api/estimates/:id` (full replace, including the whole line-item array), then
+navigates to the saved estimate's detail page. Cancel discards and returns to `/`.
+Delete (edit mode only) opens the existing `ConfirmDialog`.
+
+### Edge cases (asserted in `money.test.ts` — 36 tests — and `estimateForm.test.ts` — 17 tests)
+
+| Case | Expected behavior |
+|---|---|
+| `dollarsToCents('19.99')` | exactly `1999` — proves integer-arithmetic parsing avoids the classic `parseFloat('19.99') * 100 = 1998.9999999999998` float bug |
+| `parseQuantity` with >3 decimal places | rejected (`null`) — mirrors the `DECIMAL(12,3)` server contract |
+| Blank/invalid fields fed to `buildCalcInput` (live preview) | silently become `0`, never throw — the preview must tolerate mid-edit input |
+| The same blank/invalid fields fed to `validateForm` (save) | produce field-level errors and block save — same primitives, stricter path |
+| `buildCalcInput` run through the real `calculateEstimate` | reproduces the calculation skill's canonical worked example exactly: `subtotal 6122, discount 612, discountedSubtotal 5510, tax 455, grandTotal 5965` ($59.65) |
+| `formStateFromEstimate` round-trip | percentage discount, fixed discount, and no-discount estimates all round-trip to the correct `discountMode`/`discountValue`/`taxRate` strings |
+| `validateForm` | catches: no client selected, blank project name, quantity with >3 decimals, negative rate, blank line-item description, invalid tax rate; a blank discount is valid (means "no discount"); zero line items is valid |
+
+### Verified live in a real browser (against the real seeded backend)
+
+- **All three entry modes:** empty create, create with a client preselected via
+  `?clientId=` (dropdown pre-shows "Globex"), and edit (prefilled from a real draft
+  estimate, including its correct empty-line-items placeholder).
+- **Live totals, hand-verified:** filled a 2-line item ($312.50 + $99.99 = $412.49
+  subtotal), a $50 fixed discount, and 8.25% tax — the UI showed discount `-$50.00`, tax
+  `$29.91`, total `$392.40`; hand computation: `(41249 − 5000) × 0.0825 = 2990.5425 →
+  2991`, `36249 + 2991 = 39240` — exact match.
+  Also verified a live tax-rate edit recomputing $200.00 → $220.00 (10% of $200 = $20).
+- **Add New Client:** opened the dialog, created a disposable client, confirmed it was
+  auto-added to the dropdown and auto-selected — then removed it afterward via
+  `npm run seed` (there is no delete-client endpoint, per the clients-are-list+create-only
+  scope decision from the API-routes feature).
+- **Validation:** attempted save with a blank client/project name/description/rate;
+  confirmed the exact field-level error messages appear and save is blocked.
+- **Save-create (POST):** saved a new estimate for real, confirmed the detail page shows
+  the correct totals, then used it as the target for the edit test below.
+- **Save-edit (PUT):** edited that same disposable estimate's project name and tax rate,
+  confirmed the detail page reflects both changes and the recomputed total.
+- **Delete (edit mode):** opened the real `ConfirmDialog`, confirmed the correct project
+  name is interpolated, confirmed deletion navigates to `/` and the estimate is gone from
+  the Dashboard.
+- **Sent-estimate guard:** navigating directly to `/estimates/:id/edit` for a real `sent`
+  estimate redirects to its read-only detail page instead of rendering the form — the
+  one-way status rule is enforced before the form ever mounts, not just server-side.
+
+### Known limitations
+
+- **No delete-client endpoint** — a client created via "Add New Client" during manual
+  testing can't be removed through the app; cleanup requires re-seeding (idempotent,
+  local-only). Not a gap in this feature — clients are list+create only by design (see
+  the API-routes feature's decision).
+- **No `@testing-library/react` component tests** — consistent with the project so far;
+  the interactive components (`ClientSelect`, `DiscountField`, `LineItemEditorRow`,
+  `AddClientDialog`, etc.) are verified by actually driving the running app via CDP, not
+  unit-tested in isolation.
+- **Discount/tax rate strings are not re-formatted while typing** — e.g. typing `8.25`
+  into tax rate is stored and used as-is; only on load (`formStateFromEstimate`) is a
+  basis-point value converted to its canonical trimmed display string. This matches how
+  the money-input fields behave elsewhere in the app.
