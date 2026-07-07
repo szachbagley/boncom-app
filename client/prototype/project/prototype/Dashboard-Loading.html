@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Boncom Estimates — Dashboard (Loading)</title>
+<link rel="stylesheet" href="../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/lucide@0.462.0/dist/umd/lucide.min.js"></script>
+<script src="../_ds_bundle.js"></script>
+<style>
+  html, body { margin: 0; min-height: 100%; background: var(--surface-page); }
+  #root { min-height: 100vh; }
+  a, a:hover { color: var(--text-link); }
+  @keyframes b-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+  .sk { background: var(--color-neutral-100); animation: b-pulse 1.4s var(--ease-standard) infinite; }
+  @media (prefers-reduced-motion: reduce) { .sk { animation: none; } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+const NS = window.BoncomEstimatesDesignSystem_54c230;
+const { Button } = NS;
+
+function Icon({ name, size = 18, color = 'currentColor', strokeWidth = 1.75, style }) {
+  const ref = React.useRef(null);
+  React.useEffect(() => {
+    if (ref.current && window.lucide) {
+      ref.current.innerHTML = '';
+      const el = document.createElement('i');
+      el.setAttribute('data-lucide', name);
+      ref.current.appendChild(el);
+      window.lucide.createIcons({ attrs: { width: size, height: size, stroke: color, 'stroke-width': strokeWidth } });
+    }
+  }, [name, size, color, strokeWidth]);
+  return <span ref={ref} style={{ display: 'inline-flex', width: size, height: size, ...style }} />;
+}
+
+/* Disabled dropdown shells so the header footprint matches the data state */
+function ControlShell({ icon, label }) {
+  return (
+    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, height: 44, padding: '0 14px',
+      border: '1px solid var(--border-strong)', opacity: 0.5,
+      fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 700, letterSpacing: '2.3px',
+      textTransform: 'uppercase', color: 'var(--color-navy)' }}>
+      <Icon name={icon} size={16} color="#002042" />{label}
+      <Icon name="chevron-down" size={14} color="#6B7A87" />
+    </div>
+  );
+}
+
+function Header() {
+  return (
+    <header style={{ borderBottom: '1px solid var(--border-hairline)', padding: '0 48px' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', alignItems: 'center',
+        justifyContent: 'space-between', gap: 24, height: 96 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 9 }}>
+          <span style={{ fontSize: 30, fontWeight: 700, letterSpacing: '-0.6px', color: 'var(--color-navy)' }}>Boncom</span>
+          <span style={{ fontSize: 30, fontWeight: 300, letterSpacing: '-0.6px', color: 'var(--color-ink)' }}>Estimates</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <Button variant="primary" style={{ whiteSpace: 'nowrap' }} iconLeft={<Icon name="plus" size={16} color="#fff" />}>Add estimate</Button>
+          <ControlShell icon="arrow-up-down" label="Sort" />
+          <ControlShell icon="filter" label="Filter" />
+        </div>
+      </div>
+    </header>
+  );
+}
+
+/* Skeleton primitives */
+function Bar({ w, h = 14, style }) {
+  return <div className="sk" style={{ width: w, height: h, ...style }} />;
+}
+function CardSkeleton() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+      minHeight: 132, padding: 22, background: '#fff', border: '1px solid var(--border-hairline)' }}>
+      <div>
+        <Bar w="78%" h={16} />
+        <Bar w="52%" h={16} style={{ marginTop: 10 }} />
+      </div>
+      <Bar w={64} h={22} />
+    </div>
+  );
+}
+function GroupSkeleton({ count }) {
+  return (
+    <section style={{ marginBottom: 44 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
+        <Bar w={190} h={22} />
+        <div className="sk" style={{ width: 30, height: 30, border: '1px solid var(--border-strong)', background: 'var(--color-neutral-50)' }} />
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(258px, 1fr))', gap: 16 }}>
+        {Array.from({ length: count }).map((_, i) => <CardSkeleton key={i} />)}
+      </div>
+    </section>
+  );
+}
+
+function Dashboard() {
+  return (
+    <div aria-busy="true">
+      <Header />
+      <main style={{ maxWidth: 1200, margin: '0 auto', padding: '40px 48px 80px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 34 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '3px', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>
+            Estimates
+          </div>
+          <Bar w={120} h={12} />
+        </div>
+        <GroupSkeleton count={3} />
+        <GroupSkeleton count={2} />
+        <GroupSkeleton count={1} />
+      </main>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<Dashboard />);
+</script>
+</body>
+</html>

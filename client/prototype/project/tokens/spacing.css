@@ -1,0 +1,39 @@
+/* ============================================================
+   SPACING, LAYOUT & SHAPE
+   Sharp corners everywhere (radius 0). No shadows. Hairline borders.
+   Generous, editorial whitespace built on a 4px base.
+   ============================================================ */
+
+:root {
+  /* Spacing scale (4px base) */
+  --space-0:   0;
+  --space-1:   4px;
+  --space-2:   8px;
+  --space-3:   12px;
+  --space-4:   16px;
+  --space-5:   24px;
+  --space-6:   32px;
+  --space-7:   48px;
+  --space-8:   64px;
+  --space-9:   96px;
+  --space-10: 128px;
+
+  /* Radius — the brand is sharp. This exists only to be explicit about 0. */
+  --radius-none: 0;
+
+  /* Borders */
+  --border-width: 1px;
+
+  /* Shadows — intentionally none. Depth comes from borders and whitespace. */
+  --shadow-none: none;
+
+  /* Layout */
+  --container-max: 1200px;
+  --container-narrow: 760px;
+  --content-gutter: 32px;
+
+  /* Motion — calm, no bounce. Fades and short slides only. */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1); /* @kind other */
+  --dur-fast: 120ms;  /* @kind other */
+  --dur-base: 200ms;  /* @kind other */
+}

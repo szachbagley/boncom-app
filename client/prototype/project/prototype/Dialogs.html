@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Boncom Estimates — Dialogs</title>
+<link rel="stylesheet" href="../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/lucide@0.462.0/dist/umd/lucide.min.js"></script>
+<script src="../_ds_bundle.js"></script>
+<style>
+  html, body { margin: 0; min-height: 100%; background: var(--surface-page); }
+  #root { min-height: 100vh; }
+  a, a:hover { color: var(--text-link); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+const NS = window.BoncomEstimatesDesignSystem_54c230;
+const { Button, Dialog, Input } = NS;
+
+function Icon({ name, size = 18, color = 'currentColor', strokeWidth = 1.75, style }) {
+  const ref = React.useRef(null);
+  React.useEffect(() => {
+    if (ref.current && window.lucide) {
+      ref.current.innerHTML = '';
+      const el = document.createElement('i');
+      el.setAttribute('data-lucide', name);
+      ref.current.appendChild(el);
+      window.lucide.createIcons({ attrs: { width: size, height: size, stroke: color, 'stroke-width': strokeWidth } });
+    }
+  }, [name, size, color, strokeWidth]);
+  return <span ref={ref} style={{ display: 'inline-flex', width: size, height: size, ...style }} />;
+}
+
+function Demo() {
+  const [open, setOpen] = React.useState(null); // 'client' | 'send' | 'delete'
+  const [name, setName] = React.useState('');
+  const close = () => setOpen(null);
+
+  const triggers = [
+    { key: 'client', label: 'Add new client', icon: 'plus', variant: 'secondary' },
+    { key: 'send', label: 'Send estimate', icon: 'send', variant: 'accent' },
+    { key: 'delete', label: 'Delete estimate', icon: 'trash-2', variant: 'danger' },
+  ];
+
+  return (
+    <div style={{ maxWidth: 760, margin: '0 auto', padding: '72px 48px' }}>
+      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '3px', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Dialogs</div>
+      <h1 style={{ margin: '10px 0 6px', fontSize: 34, fontWeight: 300, letterSpacing: '-1px', color: 'var(--color-navy)' }}>Modal dialogs</h1>
+      <p style={{ margin: '0 0 32px', fontSize: 16, color: 'var(--text-secondary)' }}>Open each to preview. Esc or click the scrim to dismiss.</p>
+
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+        {triggers.map(t => (
+          <Button key={t.key} variant={t.variant} onClick={() => setOpen(t.key)} style={{ whiteSpace: 'nowrap' }}
+            iconLeft={<Icon name={t.icon} size={15} color={t.variant === 'accent' ? '#002042' : (t.variant === 'danger' ? '#C24634' : '#002042')} />}>
+            {t.label}
+          </Button>
+        ))}
+      </div>
+
+      {/* 1 — Add New Client */}
+      <Dialog open={open === 'client'} onClose={close} label="Client" title="Add new client" width={480}
+        footer={<>
+          <Button variant="ghost" onClick={close}>Cancel</Button>
+          <Button variant="primary" onClick={close}>Add</Button>
+        </>}>
+        <Input label="Client name" placeholder="e.g. Harbor Light Nonprofit"
+          value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+      </Dialog>
+
+      {/* 2 — Send Estimate confirmation */}
+      <Dialog open={open === 'send'} onClose={close} label="Confirm" title="Send this estimate?" width={520}
+        footer={<>
+          <Button variant="ghost" onClick={close}>Cancel</Button>
+          <Button variant="accent" onClick={close} iconLeft={<Icon name="send" size={15} color="#002042" />}>Send</Button>
+        </>}>
+        <p style={{ margin: 0 }}>
+          Sending marks this estimate as <strong>Sent</strong> and delivers it to the client.
+        </p>
+        <div style={{ display: 'flex', gap: 10, marginTop: 16, padding: '12px 14px',
+          background: 'var(--color-warning-bg)', border: '1px solid var(--color-warning)' }}>
+          <Icon name="alert-triangle" size={18} color="#FC4F2C" style={{ flexShrink: 0, marginTop: 2 }} />
+          <span style={{ fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.5 }}>
+            Once sent, it can no longer be edited or reverted to a draft. This can't be undone.
+          </span>
+        </div>
+      </Dialog>
+
+      {/* 3 — Delete Estimate confirmation */}
+      <Dialog open={open === 'delete'} onClose={close} label="Confirm" title="Delete this estimate?" width={480}
+        footer={<>
+          <Button variant="ghost" onClick={close}>Cancel</Button>
+          <Button variant="danger" onClick={close} iconLeft={<Icon name="trash-2" size={15} color="#C24634" />}>Delete</Button>
+        </>}>
+        <p style={{ margin: 0 }}>
+          <strong>Spring Brand Refresh</strong> will be permanently deleted. This can't be undone.
+        </p>
+      </Dialog>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<Demo />);
+</script>
+</body>
+</html>

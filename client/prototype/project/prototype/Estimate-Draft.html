@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Boncom Estimates — Estimate (Draft)</title>
+<link rel="stylesheet" href="../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/lucide@0.462.0/dist/umd/lucide.min.js"></script>
+<script src="../_ds_bundle.js"></script>
+<style>
+  html, body { margin: 0; min-height: 100%; background: var(--surface-page); }
+  #root { min-height: 100vh; }
+  a, a:hover { color: var(--text-link); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+const NS = window.BoncomEstimatesDesignSystem_54c230;
+const { Button, Badge } = NS;
+
+function Icon({ name, size = 18, color = 'currentColor', strokeWidth = 1.75, style }) {
+  const ref = React.useRef(null);
+  React.useEffect(() => {
+    if (ref.current && window.lucide) {
+      ref.current.innerHTML = '';
+      const el = document.createElement('i');
+      el.setAttribute('data-lucide', name);
+      ref.current.appendChild(el);
+      window.lucide.createIcons({ attrs: { width: size, height: size, stroke: color, 'stroke-width': strokeWidth } });
+    }
+  }, [name, size, color, strokeWidth]);
+  return <span ref={ref} style={{ display: 'inline-flex', width: size, height: size, ...style }} />;
+}
+
+const money = (n) => (n < 0 ? '\u2212$' : '$') + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const ESTIMATE = {
+  client: 'Northwind Studios',
+  project: 'Spring Brand Refresh',
+  status: 'draft',
+  lineItems: [
+    { desc: 'Design consultation',   amount: 31.25 },
+    { desc: 'Concept revisions',     amount: 29.97 },
+    { desc: 'Photography direction', amount: 150.00 },
+    { desc: 'Post-production',       amount: 80.00 },
+  ],
+  subtotal: 291.22,
+  discountPct: 10,
+  discount: -29.12,
+  taxPct: 8.25,
+  tax: 21.61,
+  total: 283.71,
+};
+
+/* ---- Header: wordmark + back affordance ---- */
+function Header() {
+  const [hover, setHover] = React.useState(false);
+  return (
+    <header style={{ borderBottom: '1px solid var(--border-hairline)', padding: '0 48px' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', alignItems: 'center',
+        justifyContent: 'space-between', gap: 24, height: 96 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 22 }}>
+          <a href="Dashboard.html" onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none',
+              color: hover ? 'var(--color-navy)' : 'var(--text-secondary)',
+              fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 700, letterSpacing: '2.3px', textTransform: 'uppercase' }}>
+            <Icon name="arrow-left" size={16} color={hover ? '#002042' : '#6B7A87'} /> Estimates
+          </a>
+          <span style={{ width: 1, height: 30, background: 'var(--border-hairline)' }} />
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 9 }}>
+            <span style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.6px', color: 'var(--color-navy)' }}>Boncom</span>
+            <span style={{ fontSize: 26, fontWeight: 300, letterSpacing: '-0.6px', color: 'var(--color-ink)' }}>Estimates</span>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function LineRow({ desc, amount, last }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 24,
+      padding: '18px 0', borderBottom: last ? 'none' : '1px solid var(--border-hairline)' }}>
+      <span style={{ fontSize: 17, color: 'var(--text-primary)' }}>{desc}</span>
+      <span style={{ fontSize: 17, color: 'var(--color-navy)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{money(amount)}</span>
+    </div>
+  );
+}
+
+function TotalRow({ label, note, amount, emphasize }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 24,
+      padding: emphasize ? '20px 0 0' : '11px 0',
+      borderTop: emphasize ? '1px solid var(--border-strong)' : 'none', marginTop: emphasize ? 10 : 0 }}>
+      <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 8,
+        fontSize: emphasize ? 13 : 15,
+        fontWeight: emphasize ? 700 : 400,
+        letterSpacing: emphasize ? '2.3px' : 0,
+        textTransform: emphasize ? 'uppercase' : 'none',
+        color: emphasize ? 'var(--text-secondary)' : 'var(--text-primary)' }}>
+        {label}
+        {note && <span style={{ fontSize: 13, color: 'var(--text-muted)', letterSpacing: 0, textTransform: 'none', fontWeight: 400 }}>{note}</span>}
+      </span>
+      <span style={{
+        fontSize: emphasize ? 30 : 15,
+        fontWeight: emphasize ? 300 : 400,
+        letterSpacing: emphasize ? '-0.8px' : 0,
+        color: 'var(--color-navy)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+        {money(amount)}
+      </span>
+    </div>
+  );
+}
+
+function EstimateDetail() {
+  const e = ESTIMATE;
+  return (
+    <div>
+      <Header />
+      <main style={{ maxWidth: 760, margin: '0 auto', padding: '48px 48px 80px' }}>
+        {/* Header block */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24,
+          paddingBottom: 28, borderBottom: '1px solid var(--border-hairline)' }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: '2.3px', textTransform: 'uppercase',
+              color: 'var(--text-secondary)', marginBottom: 10 }}>{e.client}</div>
+            <h1 style={{ margin: 0, fontSize: 40, fontWeight: 300, letterSpacing: '-1.2px', color: 'var(--color-navy)' }}>
+              {e.project}
+            </h1>
+          </div>
+          <div style={{ paddingTop: 6 }}><Badge status={e.status} /></div>
+        </div>
+
+        {/* Line items */}
+        <div style={{ marginTop: 40 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '3px', textTransform: 'uppercase',
+            color: 'var(--text-secondary)', marginBottom: 6 }}>Line items</div>
+          {e.lineItems.map((li, i) => (
+            <LineRow key={i} desc={li.desc} amount={li.amount} last={i === e.lineItems.length - 1} />
+          ))}
+        </div>
+
+        {/* Totals */}
+        <div style={{ marginTop: 40, marginLeft: 'auto', maxWidth: 380 }}>
+          <TotalRow label="Subtotal" amount={e.subtotal} />
+          <TotalRow label="Discount" note={`(${e.discountPct}%)`} amount={e.discount} />
+          <TotalRow label="Tax" note={`(${e.taxPct}%)`} amount={e.tax} />
+          <TotalRow label="Total" amount={e.total} emphasize />
+        </div>
+
+        {/* Actions */}
+        <div style={{ marginTop: 48, paddingTop: 28, borderTop: '1px solid var(--border-hairline)',
+          display: 'flex', alignItems: 'center', gap: 12 }}>
+          <Button variant="primary" iconLeft={<Icon name="pencil" size={15} color="#fff" />}>Edit</Button>
+          <Button variant="accent" iconLeft={<Icon name="send" size={15} color="#002042" />}>Send estimate</Button>
+          <div style={{ flex: 1 }} />
+          <Button variant="danger" iconLeft={<Icon name="trash-2" size={15} color="#C24634" />}>Delete estimate</Button>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<EstimateDetail />);
+</script>
+</body>
+</html>

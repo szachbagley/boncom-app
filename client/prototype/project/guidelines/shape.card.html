@@ -1,0 +1,15 @@
+<!-- @dsCard group="Spacing" viewport="700x180" name="Shape & Shadow" subtitle="Sharp corners, hairline borders, no shadow" -->
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>body{margin:0;padding:24px;background:#fff;}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+  .demo{height:80px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;letter-spacing:1.4px;text-transform:uppercase;color:var(--text-secondary);}
+  .cap{font-size:11px;color:var(--text-secondary);letter-spacing:1px;text-transform:uppercase;margin-top:10px;}
+</style></head>
+<body>
+<div class="grid">
+  <div><div class="demo" style="border:1px solid var(--border-hairline)">Hairline</div><div class="cap">Border · 1px #DDE5EC</div></div>
+  <div><div class="demo" style="border:1px solid var(--border-hairline);border-top:3px solid var(--color-cyan)">Accent top</div><div class="cap">Emphasis · cyan rule</div></div>
+  <div><div class="demo" style="border:1px solid var(--border-hairline)">Radius 0</div><div class="cap">Corners · always sharp</div></div>
+</div>
+</body></html>

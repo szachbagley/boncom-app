@@ -1,0 +1,5 @@
+/* Open Sans — the single brand typeface (weights 300 / 400 / 600 / 700).
+   Loaded from the Google Fonts CSS API, which resolves to the correct
+   @font-face rules at runtime. Consumers link styles.css, which reaches this file. */
+
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap');

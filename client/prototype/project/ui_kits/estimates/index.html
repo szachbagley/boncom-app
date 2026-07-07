@@ -1,0 +1,65 @@
+<!-- @dsCard group="Estimates App" viewport="1280x800" name="Boncom Estimates — App" subtitle="Interactive estimates tool: list, editor, new-estimate flow" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Boncom Estimates</title>
+<link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/lucide@0.462.0/dist/umd/lucide.min.js"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>
+  html, body { height: 100%; margin: 0; }
+  #root { height: 100vh; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" src="data.js" data-presets="react"></script>
+<script type="text/babel" src="AppShell.jsx" data-presets="react"></script>
+<script type="text/babel" src="Dashboard.jsx" data-presets="react"></script>
+<script type="text/babel" src="EstimateEditor.jsx" data-presets="react"></script>
+<script type="text/babel" data-presets="react">
+const NS = window.BoncomEstimatesDesignSystem_54c230;
+const { Button, Dialog, Input, Select, Textarea, IconButton } = NS;
+
+function App() {
+  const [view, setView] = React.useState({ name: 'list' });
+  const [nav, setNav] = React.useState('estimates');
+  const [newOpen, setNewOpen] = React.useState(false);
+
+  const topActions = (
+    <>
+      <IconButton label="Notifications" variant="ghost"><Icon name="bell" size={18} color="#002042" /></IconButton>
+      <Button variant="primary" size="sm" iconLeft={<Icon name="plus" size={14} color="#fff" />} onClick={() => setNewOpen(true)}>New</Button>
+    </>
+  );
+
+  return (
+    <window.AppShell nav={nav} onNav={(k) => { setNav(k); setView({ name: 'list' }); }} actions={topActions}>
+      {view.name === 'list'
+        ? <window.Dashboard onOpen={(e) => setView({ name: 'editor', estimate: e })} onNew={() => setNewOpen(true)} />
+        : <window.EstimateEditor estimate={view.estimate} onBack={() => setView({ name: 'list' })} onSend={() => setView({ name: 'list' })} />}
+
+      <Dialog open={newOpen} onClose={() => setNewOpen(false)} label="Create" title="New estimate"
+        footer={<>
+          <Button variant="ghost" onClick={() => setNewOpen(false)}>Cancel</Button>
+          <Button variant="primary" onClick={() => { setNewOpen(false); setView({ name: 'editor', estimate: null }); }}>Create estimate</Button>
+        </>}>
+        <div style={{ display: 'grid', gap: 18 }}>
+          <Input label="Client" placeholder="Organization name" />
+          <Input label="Project" placeholder="What are we making?" />
+          <Select label="Rate card" options={[{value:'nonprofit',label:'Nonprofit — standard'},{value:'pro-bono',label:'Pro bono'},{value:'commercial',label:'Commercial'}]} />
+          <Textarea label="Scope notes" rows={3} placeholder="Optional" />
+        </div>
+      </Dialog>
+    </window.AppShell>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

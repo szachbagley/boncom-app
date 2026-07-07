@@ -1,0 +1,91 @@
+/* ============================================================
+   BASE — element defaults + a few brand utility classes.
+   Applies the brand foundations to raw HTML.
+   ============================================================ */
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--surface-page);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  font-weight: var(--fw-regular);
+  line-height: var(--lh-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Headings — hierarchy by weight + size, single family, navy */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text-heading);
+  margin: 0 0 var(--space-4);
+  line-height: var(--lh-heading);
+}
+h1 { font-size: var(--fs-h1); font-weight: var(--fw-light);    letter-spacing: var(--ls-display); }
+h2 { font-size: var(--fs-h2); font-weight: var(--fw-light);    letter-spacing: var(--ls-heading); }
+h3 { font-size: var(--fs-h3); font-weight: var(--fw-semibold); letter-spacing: var(--ls-normal); }
+
+p { margin: 0 0 var(--space-4); }
+p:last-child { margin-bottom: 0; }
+
+/* Links — cyan by default, navy on hover. Always define both. */
+a {
+  color: var(--text-link);
+  text-decoration: none;
+  transition: color var(--dur-fast) var(--ease-standard);
+}
+a:hover { color: var(--text-link-hover); }
+
+strong, b { font-weight: var(--fw-bold); }
+
+hr {
+  border: 0;
+  border-top: var(--border-width) solid var(--border-hairline);
+  margin: var(--space-6) 0;
+}
+
+::selection {
+  background: var(--color-cyan);
+  color: var(--color-navy);
+}
+
+/* ---- Brand utility classes ---- */
+
+/* Hero / display type */
+.b-hero {
+  font-size: var(--fs-hero);
+  font-weight: var(--fw-light);
+  letter-spacing: var(--ls-hero);
+  line-height: var(--lh-tight);
+  color: var(--text-heading);
+}
+
+/* Section label — spaced uppercase micro-heading */
+.b-section-label {
+  font-size: var(--fs-label);
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+/* Nav / small label */
+.b-nav-label {
+  font-size: var(--fs-nav);
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--ls-nav);
+  text-transform: uppercase;
+}
+
+/* Subhead */
+.b-subhead {
+  font-size: var(--fs-subhead);
+  font-weight: var(--fw-semibold);
+  color: var(--text-heading);
+}

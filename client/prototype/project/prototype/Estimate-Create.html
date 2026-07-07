@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Boncom Estimates — New Estimate</title>
+<link rel="stylesheet" href="../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/lucide@0.462.0/dist/umd/lucide.min.js"></script>
+<script src="../_ds_bundle.js"></script>
+<style>
+  html, body { margin: 0; min-height: 100%; background: var(--surface-page); }
+  #root { min-height: 100vh; }
+  a, a:hover { color: var(--text-link); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+const NS = window.BoncomEstimatesDesignSystem_54c230;
+const { Button, IconButton } = NS;
+
+/* ---------- icon helper ---------- */
+function Icon({ name, size = 18, color = 'currentColor', strokeWidth = 1.75, style }) {
+  const ref = React.useRef(null);
+  React.useEffect(() => {
+    if (ref.current && window.lucide) {
+      ref.current.innerHTML = '';
+      const el = document.createElement('i');
+      el.setAttribute('data-lucide', name);
+      ref.current.appendChild(el);
+      window.lucide.createIcons({ attrs: { width: size, height: size, stroke: color, 'stroke-width': strokeWidth } });
+    }
+  }, [name, size, color, strokeWidth]);
+  return <span ref={ref} style={{ display: 'inline-flex', width: size, height: size, ...style }} />;
+}
+
+const money = (n) => (n < 0 ? '\u2212$' : '$') + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const CLIENTS = ['Northwind Studios', 'Cascade Public Health', 'Meridian Museum', 'Harbor Light Nonprofit'];
+
+/* ---------- shared field label ---------- */
+function FieldLabel({ children }) {
+  return <label style={{ display: 'block', fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 700,
+    letterSpacing: '2.3px', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: 8 }}>{children}</label>;
+}
+
+/* ---------- bare input styled to the system (used inline in rows) ---------- */
+function BareInput({ value, onChange, placeholder, align = 'left', type = 'text', inputMode, style }) {
+  const [focus, setFocus] = React.useState(false);
+  return (
+    <input
+      value={value} onChange={onChange} placeholder={placeholder} type={type} inputMode={inputMode}
+      onFocus={() => setFocus(true)} onBlur={() => setFocus(false)}
+      style={{
+        width: '100%', minWidth: 0, height: 44, padding: '0 12px', textAlign: align,
+        border: `1px solid ${focus ? 'var(--border-focus)' : 'var(--border-strong)'}`,
+        outline: 'none', background: '#fff', borderRadius: 0,
+        fontFamily: 'var(--font-sans)', fontSize: 15, color: 'var(--text-primary)',
+        fontVariantNumeric: 'tabular-nums',
+        transition: 'border-color 140ms cubic-bezier(0.4,0,0.2,1)', ...style,
+      }}
+    />
+  );
+}
+
+/* ---------- $ / % adornment wrapper ---------- */
+function AdornedInput({ symbol, symbolSide = 'left', value, onChange, align = 'right', width }) {
+  const [focus, setFocus] = React.useState(false);
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', width: width || '100%',
+      border: `1px solid ${focus ? 'var(--border-focus)' : 'var(--border-strong)'}`, background: '#fff',
+      transition: 'border-color 140ms cubic-bezier(0.4,0,0.2,1)' }}>
+      {symbolSide === 'left' && <span style={{ paddingLeft: 12, color: 'var(--text-secondary)', fontSize: 15 }}>{symbol}</span>}
+      <input value={value} onChange={onChange} inputMode="decimal"
+        onFocus={() => setFocus(true)} onBlur={() => setFocus(false)}
+        style={{ flex: 1, minWidth: 0, height: 44, padding: symbolSide === 'left' ? '0 12px 0 8px' : '0 8px 0 12px',
+          textAlign: align, border: 'none', outline: 'none', background: 'transparent', borderRadius: 0,
+          fontFamily: 'var(--font-sans)', fontSize: 15, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }} />
+      {symbolSide === 'right' && <span style={{ paddingRight: 12, color: 'var(--text-secondary)', fontSize: 15 }}>{symbol}</span>}
+    </div>
+  );
+}
+
+/* ---------- Client dropdown ---------- */
+function ClientSelect({ value, onChange }) {
+  const [open, setOpen] = React.useState(false);
+  const [focus, setFocus] = React.useState(false);
+  const ref = React.useRef(null);
+  React.useEffect(() => {
+    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    window.addEventListener('click', h);
+    return () => window.removeEventListener('click', h);
+  }, []);
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button onClick={() => setOpen(o => !o)} onFocus={() => setFocus(true)} onBlur={() => setFocus(false)}
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: 44,
+          padding: '0 14px', background: '#fff', cursor: 'pointer',
+          border: `1px solid ${(open || focus) ? 'var(--border-focus)' : 'var(--border-strong)'}`, borderRadius: 0,
+          fontFamily: 'var(--font-sans)', fontSize: 15, color: value ? 'var(--text-primary)' : 'var(--text-secondary)', textAlign: 'left' }}>
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value || 'Select a client'}</span>
+        <Icon name="chevron-down" size={16} color="#6B7A87" />
+      </button>
+      {open && (
+        <div style={{ position: 'absolute', top: 48, left: 0, right: 0, zIndex: 30, background: '#fff',
+          border: '1px solid var(--border-strong)', borderTop: '3px solid var(--color-cyan)', maxHeight: 260, overflow: 'auto' }}>
+          {CLIENTS.map((c) => {
+            const [h, setH] = [c === value, null];
+            return <ClientOption key={c} label={c} selected={c === value} onClick={() => { onChange(c); setOpen(false); }} />;
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+function ClientOption({ label, selected, onClick }) {
+  const [h, setH] = React.useState(false);
+  return (
+    <button onClick={onClick} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%',
+        padding: '11px 14px', border: 'none', borderBottom: '1px solid var(--border-hairline)',
+        background: h ? 'var(--surface-subtle)' : '#fff', cursor: 'pointer',
+        fontFamily: 'var(--font-sans)', fontSize: 15, color: 'var(--text-primary)', textAlign: 'left' }}>
+      {label}
+      {selected && <Icon name="check" size={15} color="#65C6D9" />}
+    </button>
+  );
+}
+
+/* ---------- Header ---------- */
+function Header() {
+  const [hover, setHover] = React.useState(false);
+  return (
+    <header style={{ borderBottom: '1px solid var(--border-hairline)', padding: '0 48px' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 22, height: 96 }}>
+        <a href="Dashboard.html" onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none',
+            color: hover ? 'var(--color-navy)' : 'var(--text-secondary)',
+            fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 700, letterSpacing: '2.3px', textTransform: 'uppercase' }}>
+          <Icon name="arrow-left" size={16} color={hover ? '#002042' : '#6B7A87'} /> Estimates
+        </a>
+        <span style={{ width: 1, height: 30, background: 'var(--border-hairline)' }} />
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 9 }}>
+          <span style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.6px', color: 'var(--color-navy)' }}>Boncom</span>
+          <span style={{ fontSize: 26, fontWeight: 300, letterSpacing: '-0.6px', color: 'var(--color-ink)' }}>Estimates</span>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+/* ---------- Line item row ---------- */
+function LineItemRow({ item, onChange, onRemove, canRemove }) {
+  const lineTotal = (parseFloat(item.qty) || 0) * (parseFloat(item.rate) || 0);
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 96px 132px 104px 44px', gap: 12,
+      alignItems: 'center', padding: '10px 0' }}>
+      <BareInput value={item.desc} placeholder="Description" onChange={(e) => onChange({ ...item, desc: e.target.value })} />
+      <BareInput value={item.qty} align="center" inputMode="decimal" placeholder="1"
+        onChange={(e) => onChange({ ...item, qty: e.target.value })} />
+      <AdornedInput symbol="$" value={item.rate} onChange={(e) => onChange({ ...item, rate: e.target.value })} />
+      <div style={{ textAlign: 'right', fontSize: 15, fontWeight: 600, color: 'var(--color-navy)',
+        fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', paddingRight: 4 }}>{money(lineTotal)}</div>
+      <IconButton label="Remove line item" variant="danger" onClick={onRemove} disabled={!canRemove}>
+        <Icon name="trash-2" size={16} color="#C24634" />
+      </IconButton>
+    </div>
+  );
+}
+
+/* ---------- Totals row ---------- */
+function TotalRow({ label, note, amount, emphasize }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 24,
+      padding: emphasize ? '20px 0 0' : '11px 0',
+      borderTop: emphasize ? '1px solid var(--border-strong)' : 'none', marginTop: emphasize ? 10 : 0 }}>
+      <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 8,
+        fontSize: emphasize ? 13 : 15, fontWeight: emphasize ? 700 : 400,
+        letterSpacing: emphasize ? '2.3px' : 0, textTransform: emphasize ? 'uppercase' : 'none',
+        color: emphasize ? 'var(--text-secondary)' : 'var(--text-primary)' }}>
+        {label}
+        {note && <span style={{ fontSize: 13, color: 'var(--text-muted)', letterSpacing: 0, textTransform: 'none', fontWeight: 400 }}>{note}</span>}
+      </span>
+      <span style={{ fontSize: emphasize ? 30 : 15, fontWeight: emphasize ? 300 : 400,
+        letterSpacing: emphasize ? '-0.8px' : 0, color: 'var(--color-navy)',
+        fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{money(amount)}</span>
+    </div>
+  );
+}
+
+/* ---------- App ---------- */
+let uid = 100;
+function EstimateForm() {
+  const [client, setClient] = React.useState('');
+  const [project, setProject] = React.useState('');
+  const [items, setItems] = React.useState([]);
+  const [discountMode, setDiscountMode] = React.useState('percent'); // 'percent' | 'fixed'
+  const [discountVal, setDiscountVal] = React.useState('');
+  const [taxRate, setTaxRate] = React.useState('');
+
+  const setItem = (id, next) => setItems(list => list.map(it => it.id === id ? next : it));
+  const removeItem = (id) => setItems(list => list.filter(it => it.id !== id));
+  const addItem = () => setItems(list => [...list, { id: ++uid, desc: '', qty: '1', rate: '' }]);
+
+  const subtotal = items.reduce((s, it) => s + (parseFloat(it.qty) || 0) * (parseFloat(it.rate) || 0), 0);
+  const discount = discountMode === 'percent'
+    ? subtotal * ((parseFloat(discountVal) || 0) / 100)
+    : (parseFloat(discountVal) || 0);
+  const discountClamped = Math.min(discount, subtotal);
+  const taxable = subtotal - discountClamped;
+  const tax = taxable * ((parseFloat(taxRate) || 0) / 100);
+  const total = taxable + tax;
+
+  return (
+    <div>
+      <Header />
+      <main style={{ maxWidth: 880, margin: '0 auto', padding: '40px 48px 80px' }}>
+        {/* Title */}
+        <div style={{ marginBottom: 8 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '3px', textTransform: 'uppercase',
+            color: 'var(--text-secondary)' }}>New estimate</div>
+          <h1 style={{ margin: '10px 0 0', fontSize: 34, fontWeight: 300, letterSpacing: '-1px', color: 'var(--color-navy)' }}>
+            {project || 'Untitled estimate'}
+          </h1>
+        </div>
+
+        {/* Client + project */}
+        <div style={{ marginTop: 36, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 28 }}>
+          <div>
+            <FieldLabel>Client</FieldLabel>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <div style={{ flex: 1 }}><ClientSelect value={client} onChange={setClient} /></div>
+              <Button variant="secondary" style={{ whiteSpace: 'nowrap' }} iconLeft={<Icon name="plus" size={15} color="#002042" />}>Add new client</Button>
+            </div>
+          </div>
+          <div>
+            <FieldLabel>Project name</FieldLabel>
+            <BareInput value={project} placeholder="e.g. Spring Brand Refresh" onChange={(e) => setProject(e.target.value)} />
+          </div>
+        </div>
+
+        {/* Line items */}
+        <div style={{ marginTop: 44 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '3px', textTransform: 'uppercase',
+              color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>Line items</div>
+          </div>
+          {/* column headers */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 96px 132px 104px 44px', gap: 12,
+            padding: '0 4px 10px 0', borderBottom: '1px solid var(--border-strong)' }}>
+            {['Description', 'Qty', 'Rate', 'Amount', ''].map((h, i) => (
+              <div key={i} style={{ fontSize: 10, fontWeight: 700, letterSpacing: '1.6px', textTransform: 'uppercase',
+                color: 'var(--text-secondary)', textAlign: i === 1 ? 'center' : (i === 3 ? 'right' : 'left'),
+                paddingLeft: i === 0 ? 12 : 0, paddingRight: i === 3 ? 4 : 0 }}>{h}</div>
+            ))}
+          </div>
+          <div style={{ borderBottom: '1px solid var(--border-hairline)' }}>
+            {items.length === 0 ? (
+              <div style={{ padding: '28px 12px', fontSize: 15, color: 'var(--text-secondary)' }}>
+                No line items yet. Add your first below.
+              </div>
+            ) : items.map((it) => (
+              <LineItemRow key={it.id} item={it} onChange={(next) => setItem(it.id, next)}
+                onRemove={() => removeItem(it.id)} canRemove={items.length > 1} />
+            ))}
+          </div>
+          <div style={{ marginTop: 16 }}>
+            <Button variant="ghost" style={{ whiteSpace: 'nowrap' }} iconLeft={<Icon name="plus" size={15} color="#002042" />} onClick={addItem}>Add line item</Button>
+          </div>
+        </div>
+
+        {/* Adjustments + totals */}
+        <div style={{ marginTop: 44, display: 'grid', gridTemplateColumns: '1fr 380px', gap: 56, alignItems: 'start' }}>
+          {/* Discount + tax controls */}
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '3px', textTransform: 'uppercase',
+              color: 'var(--text-secondary)', marginBottom: 20 }}>Adjustments</div>
+
+            <div style={{ marginBottom: 26 }}>
+              <FieldLabel>Discount</FieldLabel>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'stretch' }}>
+                {/* %/$ toggle */}
+                <div style={{ display: 'flex', border: '1px solid var(--border-strong)' }}>
+                  <ToggleSeg active={discountMode === 'percent'} onClick={() => setDiscountMode('percent')}>%</ToggleSeg>
+                  <ToggleSeg active={discountMode === 'fixed'} onClick={() => setDiscountMode('fixed')} border>$</ToggleSeg>
+                </div>
+                <AdornedInput width={180}
+                  symbol={discountMode === 'percent' ? '%' : '$'}
+                  symbolSide={discountMode === 'percent' ? 'right' : 'left'}
+                  value={discountVal} onChange={(e) => setDiscountVal(e.target.value)} />
+              </div>
+            </div>
+
+            <div>
+              <FieldLabel>Tax rate</FieldLabel>
+              <AdornedInput width={180} symbol="%" symbolSide="right"
+                value={taxRate} onChange={(e) => setTaxRate(e.target.value)} />
+            </div>
+          </div>
+
+          {/* Live totals */}
+          <div style={{ border: '1px solid var(--border-hairline)', borderTop: '3px solid var(--color-cyan)', padding: 28 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '3px', textTransform: 'uppercase',
+              color: 'var(--text-secondary)', marginBottom: 14 }}>Summary</div>
+            <TotalRow label="Subtotal" amount={subtotal} />
+            <TotalRow label="Discount" note={discountMode === 'percent' ? `(${parseFloat(discountVal) || 0}%)` : null} amount={-discountClamped} />
+            <TotalRow label="Tax" note={`(${parseFloat(taxRate) || 0}%)`} amount={tax} />
+            <TotalRow label="Total" amount={total} emphasize />
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div style={{ marginTop: 48, paddingTop: 28, borderTop: '1px solid var(--border-hairline)',
+          display: 'flex', alignItems: 'center', gap: 12 }}>
+          <Button variant="primary" iconLeft={<Icon name="check" size={15} color="#fff" />}>Save as draft</Button>
+          <Button variant="ghost" onClick={() => { window.location.href = 'Dashboard.html'; }}>Cancel</Button>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function ToggleSeg({ active, onClick, border, children }) {
+  return (
+    <button onClick={onClick} style={{
+      width: 44, height: 44, border: 'none', borderLeft: border ? '1px solid var(--border-strong)' : 'none',
+      background: active ? 'var(--color-navy)' : '#fff', color: active ? '#fff' : 'var(--text-secondary)',
+      cursor: 'pointer', fontFamily: 'var(--font-sans)', fontSize: 15, fontWeight: 700,
+      transition: 'background 140ms, color 140ms' }}>{children}</button>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<EstimateForm />);
+</script>
+</body>
+</html>

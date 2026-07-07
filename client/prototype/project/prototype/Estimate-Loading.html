@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Boncom Estimates — Estimate (Loading)</title>
+<link rel="stylesheet" href="../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/lucide@0.462.0/dist/umd/lucide.min.js"></script>
+<script src="../_ds_bundle.js"></script>
+<style>
+  html, body { margin: 0; min-height: 100%; background: var(--surface-page); }
+  #root { min-height: 100vh; }
+  a, a:hover { color: var(--text-link); }
+  @keyframes b-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+  .sk { background: var(--color-neutral-100); animation: b-pulse 1.4s var(--ease-standard) infinite; }
+  @media (prefers-reduced-motion: reduce) { .sk { animation: none; } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+function Icon({ name, size = 18, color = 'currentColor', strokeWidth = 1.75, style }) {
+  const ref = React.useRef(null);
+  React.useEffect(() => {
+    if (ref.current && window.lucide) {
+      ref.current.innerHTML = '';
+      const el = document.createElement('i');
+      el.setAttribute('data-lucide', name);
+      ref.current.appendChild(el);
+      window.lucide.createIcons({ attrs: { width: size, height: size, stroke: color, 'stroke-width': strokeWidth } });
+    }
+  }, [name, size, color, strokeWidth]);
+  return <span ref={ref} style={{ display: 'inline-flex', width: size, height: size, ...style }} />;
+}
+
+function Header() {
+  return (
+    <header style={{ borderBottom: '1px solid var(--border-hairline)', padding: '0 48px' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', alignItems: 'center',
+        justifyContent: 'space-between', gap: 24, height: 96 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 22 }}>
+          <a href="Dashboard.html" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none',
+            color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 700,
+            letterSpacing: '2.3px', textTransform: 'uppercase' }}>
+            <Icon name="arrow-left" size={16} color="#6B7A87" /> Estimates
+          </a>
+          <span style={{ width: 1, height: 30, background: 'var(--border-hairline)' }} />
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 9 }}>
+            <span style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.6px', color: 'var(--color-navy)' }}>Boncom</span>
+            <span style={{ fontSize: 26, fontWeight: 300, letterSpacing: '-0.6px', color: 'var(--color-ink)' }}>Estimates</span>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function Bar({ w, h = 14, style }) {
+  return <div className="sk" style={{ width: w, height: h, ...style }} />;
+}
+
+function EstimateLoading() {
+  return (
+    <div aria-busy="true">
+      <Header />
+      <main style={{ maxWidth: 760, margin: '0 auto', padding: '48px 48px 80px' }}>
+        {/* Header block skeleton */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24,
+          paddingBottom: 28, borderBottom: '1px solid var(--border-hairline)' }}>
+          <div>
+            <Bar w={150} h={13} />
+            <Bar w={340} h={38} style={{ marginTop: 16 }} />
+          </div>
+          <div className="sk" style={{ width: 64, height: 22 }} />
+        </div>
+
+        {/* Line items skeleton */}
+        <div style={{ marginTop: 40 }}>
+          <Bar w={90} h={12} style={{ marginBottom: 20 }} />
+          {[68, 58, 74, 62].map((w, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '18px 0', borderBottom: i === 3 ? 'none' : '1px solid var(--border-hairline)' }}>
+              <Bar w={`${w}%`} h={16} />
+              <Bar w={72} h={16} />
+            </div>
+          ))}
+        </div>
+
+        {/* Totals skeleton */}
+        <div style={{ marginTop: 40, marginLeft: 'auto', maxWidth: 380 }}>
+          {[0, 1, 2].map((i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 0' }}>
+              <Bar w={110} h={14} />
+              <Bar w={70} h={14} />
+            </div>
+          ))}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '20px 0 0', borderTop: '1px solid var(--border-strong)', marginTop: 10 }}>
+            <Bar w={80} h={14} />
+            <Bar w={110} h={28} />
+          </div>
+        </div>
+
+        {/* Actions skeleton */}
+        <div style={{ marginTop: 48, paddingTop: 28, borderTop: '1px solid var(--border-hairline)',
+          display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div className="sk" style={{ width: 108, height: 44 }} />
+          <div className="sk" style={{ width: 168, height: 44 }} />
+          <div style={{ flex: 1 }} />
+          <div className="sk" style={{ width: 168, height: 44 }} />
+        </div>
+      </main>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<EstimateLoading />);
+</script>
+</body>
+</html>

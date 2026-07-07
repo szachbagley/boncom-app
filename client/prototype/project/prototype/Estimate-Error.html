@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Boncom Estimates — Estimate (Error)</title>
+<link rel="stylesheet" href="../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/lucide@0.462.0/dist/umd/lucide.min.js"></script>
+<script src="../_ds_bundle.js"></script>
+<style>
+  html, body { margin: 0; min-height: 100%; background: var(--surface-page); }
+  #root { min-height: 100vh; }
+  a, a:hover { color: var(--text-link); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+const NS = window.BoncomEstimatesDesignSystem_54c230;
+const { Button } = NS;
+
+function Icon({ name, size = 18, color = 'currentColor', strokeWidth = 1.75, style }) {
+  const ref = React.useRef(null);
+  React.useEffect(() => {
+    if (ref.current && window.lucide) {
+      ref.current.innerHTML = '';
+      const el = document.createElement('i');
+      el.setAttribute('data-lucide', name);
+      ref.current.appendChild(el);
+      window.lucide.createIcons({ attrs: { width: size, height: size, stroke: color, 'stroke-width': strokeWidth } });
+    }
+  }, [name, size, color, strokeWidth]);
+  return <span ref={ref} style={{ display: 'inline-flex', width: size, height: size, ...style }} />;
+}
+
+function Header() {
+  const [hover, setHover] = React.useState(false);
+  return (
+    <header style={{ borderBottom: '1px solid var(--border-hairline)', padding: '0 48px' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', alignItems: 'center',
+        justifyContent: 'space-between', gap: 24, height: 96 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 22 }}>
+          <a href="Dashboard.html" onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none',
+              color: hover ? 'var(--color-navy)' : 'var(--text-secondary)',
+              fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 700, letterSpacing: '2.3px', textTransform: 'uppercase' }}>
+            <Icon name="arrow-left" size={16} color={hover ? '#002042' : '#6B7A87'} /> Estimates
+          </a>
+          <span style={{ width: 1, height: 30, background: 'var(--border-hairline)' }} />
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 9 }}>
+            <span style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.6px', color: 'var(--color-navy)' }}>Boncom</span>
+            <span style={{ fontSize: 26, fontWeight: 300, letterSpacing: '-0.6px', color: 'var(--color-ink)' }}>Estimates</span>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function EstimateError() {
+  return (
+    <div>
+      <Header />
+      <main style={{ maxWidth: 760, margin: '0 auto', padding: '48px 48px 80px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          textAlign: 'center', padding: '96px 24px' }}>
+          <div style={{ width: 56, height: 56, border: '1px solid var(--color-warning)', display: 'flex',
+            alignItems: 'center', justifyContent: 'center', marginBottom: 28 }}>
+            <Icon name="alert-triangle" size={24} color="#FC4F2C" />
+          </div>
+          <h1 style={{ margin: 0, fontSize: 30, fontWeight: 300, letterSpacing: '-1px', color: 'var(--color-navy)' }}>
+            Something went wrong viewing this estimate.
+          </h1>
+          <p style={{ margin: '14px 0 0', fontSize: 16, color: 'var(--text-secondary)', maxWidth: 440 }}>
+            We couldn't load this estimate. Try again, or head back to the list.
+          </p>
+
+          {/* Room for error detail */}
+          <div style={{ marginTop: 26, width: '100%', maxWidth: 520, border: '1px solid var(--border-hairline)',
+            background: 'var(--surface-subtle)', padding: '14px 16px', textAlign: 'left' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase',
+              color: 'var(--text-secondary)', marginBottom: 6 }}>Error detail</div>
+            <code style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'var(--color-danger)' }}>
+              404 · Estimate not found (request a91f20)
+            </code>
+          </div>
+
+          <div style={{ display: 'flex', gap: 12, marginTop: 30 }}>
+            <Button variant="primary" iconLeft={<Icon name="refresh-cw" size={15} color="#fff" />}>Try again</Button>
+            <Button variant="secondary" onClick={() => { window.location.href = 'Dashboard.html'; }}>Back to estimates</Button>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<EstimateError />);
+</script>
+</body>
+</html>

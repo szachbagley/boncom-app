@@ -1,0 +1,61 @@
+/* ============================================================
+   COLORS — Boncom brand palette
+   Sharp, calm, editorial. White surface, near-black text,
+   navy for structure, cyan for interaction, orange used sparingly.
+   ============================================================ */
+
+:root {
+  /* --- Base palette (raw brand values) --- */
+  --color-white:        #FFFFFF;
+  --color-ink:          #292A2C;   /* near-black — primary text */
+  --color-navy:         #002042;   /* headings accent / structure / primary action */
+  --color-cyan:         #65C6D9;   /* accent / links / active state */
+  --color-orange:       #FC4F2C;   /* brand pop / emphasis — use sparingly */
+  --color-mute:         #BFCED9;   /* muted text — light blue-gray */
+
+  /* --- Neutral ramp (derived from ink/navy, cool-leaning, no warmth) --- */
+  --color-neutral-50:   #F6F8FA;   /* faint fill / zebra rows */
+  --color-neutral-100:  #EDF1F4;   /* hairline fills / hover surface */
+  --color-neutral-200:  #DDE5EC;   /* borders */
+  --color-neutral-300:  #C7D3DD;   /* stronger borders */
+  --color-neutral-500:  #6B7A87;   /* secondary text */
+
+  /* --- App semantic status colors (restrained register) --- */
+  --color-success:      #3E8E6E;   /* muted green — positive / paid / approved */
+  --color-success-bg:   #E7F1ED;
+  --color-danger:       #C24634;   /* muted red — destructive / error */
+  --color-danger-bg:    #F7E7E3;
+  --color-warning:      #FC4F2C;   /* brand orange — warnings */
+  --color-warning-bg:   #FDE8E3;
+
+  /* ============================================================
+     SEMANTIC ALIASES — reference these in components
+     ============================================================ */
+
+  /* Surfaces */
+  --surface-page:       var(--color-white);
+  --surface-card:       var(--color-white);
+  --surface-subtle:     var(--color-neutral-50);
+  --surface-hover:      var(--color-neutral-100);
+
+  /* Text */
+  --text-primary:       var(--color-ink);
+  --text-heading:       var(--color-navy);
+  --text-secondary:     var(--color-neutral-500);
+  --text-muted:         var(--color-mute);
+  --text-on-dark:       var(--color-white);
+  --text-link:          var(--color-cyan);
+  --text-link-hover:    var(--color-navy);
+
+  /* Lines */
+  --border-hairline:    var(--color-neutral-200);
+  --border-strong:      var(--color-neutral-300);
+  --border-focus:       var(--color-cyan);
+
+  /* Interaction */
+  --action-primary:        var(--color-navy);
+  --action-primary-hover:  #001630;
+  --action-accent:         var(--color-cyan);
+  --action-accent-hover:   #4FB4C8;
+  --action-emphasis:       var(--color-orange);
+}
