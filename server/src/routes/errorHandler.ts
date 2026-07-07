@@ -13,6 +13,13 @@ export function errorHandler(
   res: Response,
   _next: NextFunction,
 ): void {
+  // Malformed JSON body (thrown by express.json()). A client error, not a 500.
+  // body-parser attaches the raw `body` to its SyntaxError, distinguishing it
+  // from any unrelated SyntaxError.
+  if (err instanceof SyntaxError && 'body' in err) {
+    res.status(400).json({ error: 'Malformed JSON in request body' });
+    return;
+  }
   if (err instanceof ZodError) {
     // Field-level detail so the client knows exactly what to fix.
     res

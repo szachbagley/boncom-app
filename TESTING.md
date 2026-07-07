@@ -342,3 +342,80 @@ afterward and seed row counts were confirmed unchanged.
 - **No pagination, auth, or rate-limiting** on any endpoint — out of scope.
 - **Dates serialize as ISO strings** in JSON responses (standard `JSON.stringify(Date)`
   behavior) — not a special formatting step, just how the shapes cross the wire.
+
+---
+
+## CORS & error handling (cross-cutting)
+
+**What it is:** CORS locked to a configured allowlist (`CORS_ALLOWED_ORIGINS`, env-driven,
+never hardcoded) plus two additional branches in the existing centralized error handler
+(`server/src/routes/errorHandler.ts`) so bad input never falls through to a leaked 500.
+The `ZodError`/`ValidationError`/`NotFoundError` mappings already existed from the routes
+feature; this feature adds malformed-JSON handling and an unmatched-route catch-all.
+
+### How to verify
+
+```bash
+npm test                                # unit: errorHandler.test.ts + app.test.ts (no DB)
+npm run build && node dist/server.js    # then curl the cases below manually
+```
+
+Manual smoke (verified against the real running server, no mocks):
+```bash
+curl -i -H 'Origin: http://localhost:5173' http://localhost:3001/health
+#  -> Access-Control-Allow-Origin: http://localhost:5173
+
+curl -i -H 'Origin: https://evil.example.com' http://localhost:3001/health
+#  -> no Access-Control-Allow-Origin header (request still 200 server-side —
+#     the BROWSER is what enforces the block using that header, not the server)
+
+curl -i -X POST http://localhost:3001/api/clients -H 'Content-Type: application/json' -d '{bad'
+#  -> 400 {"error":"Malformed JSON in request body"}
+
+curl -i http://localhost:3001/api/nope
+#  -> 404 {"error":"Not found"}
+```
+
+### Happy path
+
+`CORS_ALLOWED_ORIGINS` (comma-separated) is parsed in `config.ts` into a `string[]`,
+defaulting to `http://localhost:5173` (the Vite dev origin) when unset. `app.ts` passes
+that list to the `cors` package's `origin` option: an allowed origin gets echoed back in
+`Access-Control-Allow-Origin`; the preflight `OPTIONS` request is handled automatically by
+the package.
+
+### Edge cases (all asserted)
+
+| Case | Expected behavior |
+|---|---|
+| Request `Origin` is in the allowlist | `Access-Control-Allow-Origin` echoes it |
+| Request `Origin` is NOT in the allowlist | header is **omitted** (not an error — the browser enforces the block client-side) |
+| Request has no `Origin` header (curl, health probes, server-to-server) | proceeds normally, unaffected by CORS |
+| `OPTIONS` preflight for an allowed origin | handled automatically, allow-origin header present |
+| Malformed JSON request body | 400, not the framework's default 500 |
+| Unmatched route | JSON `{ error: 'Not found' }`, not Express's default HTML 404 page |
+
+### Error scenarios
+
+- **Malformed JSON → 400.** `express.json()` throws a `SyntaxError` with a `body` property
+  attached (body-parser's signature) when the request body isn't valid JSON. The error
+  handler checks specifically for `err instanceof SyntaxError && 'body' in err` — this
+  distinguishes it from any unrelated `SyntaxError` a route might otherwise throw.
+- **Unmatched route → 404**, via a catch-all middleware registered after the routers and
+  before the error handler.
+- **The no-leak guarantee is tested explicitly**: `errorHandler.test.ts` asserts that a
+  generic `Error('secret db connection string')` produces exactly
+  `{ error: 'Internal Server Error' }` in the response — the secret text is asserted
+  **absent** from the JSON payload — while confirming the detail is still logged
+  server-side (`console.error` is called) for debugging.
+
+### Known limitations
+
+- **`CORS_ALLOWED_ORIGINS` must be set in Railway manually** (like `DATABASE_URL`) to the
+  deployed Vercel origin — this feature does not touch Railway's environment. Add preview
+  deployment URLs to the comma-separated list if Vercel preview builds also need to reach
+  the API.
+- **No `credentials: true`** on the CORS config — the app uses no cookies/session auth, so
+  this isn't needed. Revisit if auth is added later.
+- **No rate-limiting, Helmet, or other security headers** beyond CORS — out of scope for
+  this feature.

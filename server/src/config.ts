@@ -36,4 +36,13 @@ export const config = {
    * variable name, different value per environment.
    */
   databaseUrl: process.env.DATABASE_URL,
+  /**
+   * Browser origins allowed by CORS, from CORS_ALLOWED_ORIGINS (comma-separated,
+   * to allow the production Vercel origin plus any preview deployments). Local dev
+   * falls back to the Vite dev server. Never hardcode the deployed URL.
+   */
+  corsAllowedOrigins: (process.env.CORS_ALLOWED_ORIGINS ?? 'http://localhost:5173')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter((origin) => origin.length > 0),
 } as const;
