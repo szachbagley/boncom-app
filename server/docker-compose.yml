@@ -1,0 +1,42 @@
+# Local-development MySQL for the Boncom estimates backend.
+# This is for LOCAL DEV ONLY — production uses Railway's managed MySQL.
+# Start with:  docker compose up -d   (run from the server/ directory)
+#
+# Credentials below are non-secret local-dev defaults. They must match the
+# DATABASE_URL in server/.env. Override via env vars if you like.
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: boncom-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-boncom_estimates}
+      MYSQL_USER: ${MYSQL_USER:-boncom}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-boncom_local_pw}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_local_pw}
+    ports:
+      # host:container — 3307 on the host avoids colliding with a native MySQL on 3306.
+      - "3307:3306"
+    volumes:
+      - boncom_mysql_data:/var/lib/mysql
+    healthcheck:
+      # Reports healthy only once MySQL is actually accepting connections.
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "127.0.0.1",
+          "-u",
+          "root",
+          "-p${MYSQL_ROOT_PASSWORD:-root_local_pw}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+volumes:
+  boncom_mysql_data:
