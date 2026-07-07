@@ -89,8 +89,15 @@ Then a small Node script:
 2. `new WebSocket(webSocketDebuggerUrl)`, send JSON-RPC messages
    `{ id, method, params }`; each response arrives as a message with a matching `id`.
 3. `Page.enable`, `Runtime.enable`, then per step:
-   - Find an element's center via `Runtime.evaluate` running
-     `el.getBoundingClientRect()`.
+   - Find an element's center via `Runtime.evaluate`, but **call
+     `el.scrollIntoView({ block: 'center' })` before reading
+     `el.getBoundingClientRect()`**. `Input.dispatchMouseEvent` coordinates are clamped
+     to the actual browser window (the `--window-size` at launch, e.g. 900px tall) —
+     clicking at a Y coordinate below that does nothing, silently. A tall page (this
+     detail view, forms, anything with a long scroll) will have buttons below the fold
+     unless you scroll them into view first. This bit twice before the fix: clicks
+     "succeeded" (no error) but the target dialog never opened, because the coordinates
+     pointed past the window's actual bottom edge.
    - Click it for real with `Input.dispatchMouseEvent` (`mousePressed` then
      `mouseReleased` at those coordinates) — this fires genuine pointer events Radix
      listens for, unlike `.click()`.
@@ -130,3 +137,18 @@ await send(ws, 'Page.navigate', { url: 'http://localhost:5173/' });
 ```
 Nothing about the real backend or seed data is touched; the override lives only in that
 one CDP-controlled tab.
+
+## Any irreversible mutation needs a throwaway, not just deletes
+
+Delete isn't the only one-way action — **any state transition the app enforces as
+one-way** (e.g. an estimate's `sent` status can never revert to `draft`, by design) is
+just as permanent as a delete once you click "confirm" for real. Deleting a throwaway
+record and cleaning it up is the obvious case; clicking a real seeded record through an
+irreversible status change is easy to overlook since nothing gets deleted. Either:
+create a disposable record via the API first (`curl -X POST .../api/...`) and drive the
+irreversible action against *that*, or, if a throwaway isn't practical, be ready to
+**re-seed afterward** (`npm run seed` is idempotent and resets everything to the
+canonical dataset) rather than leaving seed data permanently mutated. Check the actual
+DB state before and after any interactive test that could mutate something
+(`docker exec boncom-mysql mysql ... -e "SELECT ..."`), don't assume a click that
+"looked cancelable" didn't commit.
