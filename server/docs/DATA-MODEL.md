@@ -65,6 +65,7 @@ estimate-level tax rate, discount, and status.
 |---|---|---|
 | `id` | `INT` AUTO_INCREMENT | Primary key |
 | `client_id` | `INT` | Foreign key → `Client.id` (required) |
+| `project_name` | `VARCHAR(255)` | What the estimate is for (e.g. "Spring Brand Refresh"). Required; distinguishes a client's multiple estimates. |
 | `status` | `ENUM('draft','sent')` | Defaults to `'draft'` |
 | `tax_rate_basis_points` | `INT` | Tax rate in basis points (8.25% → `825`). Defaults to `0`. Never a float. |
 | `discount_type` | `ENUM('percentage','fixed')` NULL | Null when the estimate has no discount |
@@ -92,6 +93,15 @@ estimate-level tax rate, discount, and status.
 **Status:**
 - `ENUM('draft','sent')` — DB-level enforcement of the fixed status set. Defaults to
   `draft`. If statuses expand later, this is the point of change.
+
+**Project name:**
+- A client can accumulate many estimates over time; `project_name` is what tells them
+  apart ("Spring Brand Refresh" vs. "Q3 Social Campaign") in list views.
+- At the DB level the column is `NOT NULL DEFAULT ''` so an `ALTER TABLE` adding it is
+  safe against existing rows (they backfill to an empty string rather than failing the
+  migration). The real requirement — a non-empty, meaningful name — is enforced at the
+  application boundary (Zod), the same split used for the discount-pair invariant above.
+- Required when creating an estimate; optional (renameable) on update.
 
 **Not stored (computed on read):** subtotal, discount amount, discounted subtotal, tax
 amount, grand total. These come from the calculation module.
@@ -171,12 +181,13 @@ No `FLOAT` or `DOUBLE` column anywhere in the schema.
 ├─────────────┤        ├──────────────────────────┤        ├─────────────────┤
 │ id (PK)     │───┐    │ id (PK)                  │───┐    │ id (PK)         │
 │ name        │   └──< │ client_id (FK)           │   └──< │ estimate_id(FK) │
-│ created_at  │        │ status (enum)            │        │ description     │
-│ updated_at  │        │ tax_rate_basis_points    │        │ quantity(12,3)  │
-└─────────────┘        │ discount_type (enum,null)│        │ rate_cents      │
-                       │ discount_value (null)    │        └─────────────────┘
-                       │ created_at               │
-                       │ updated_at               │        (ordered by id)
+│ created_at  │        │ project_name             │        │ description     │
+│ updated_at  │        │ status (enum)            │        │ quantity(12,3)  │
+└─────────────┘        │ tax_rate_basis_points    │        │ rate_cents      │
+                       │ discount_type (enum,null)│        └─────────────────┘
+                       │ discount_value (null)    │
+                       │ created_at               │        (ordered by id)
+                       │ updated_at               │
                        └──────────────────────────┘
                           totals computed on read
 ```

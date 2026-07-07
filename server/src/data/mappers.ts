@@ -36,6 +36,7 @@ export function mapEstimateRow(row: EstimateRow): Estimate {
   return {
     id: row.id,
     clientId: row.client_id,
+    projectName: row.project_name,
     status: row.status,
     taxRateBasisPoints: row.tax_rate_basis_points,
     discountType: row.discount_type,

@@ -74,6 +74,7 @@ describe('estimates repository (aggregate root)', () => {
   it('creates an estimate with initial line items, including a fractional quantity', async () => {
     const estimate = await createEstimate({
       clientId: testClientId,
+      projectName: 'Spring Brand Refresh',
       status: 'sent',
       taxRateBasisPoints: 825,
       discountType: 'percentage',
@@ -86,6 +87,7 @@ describe('estimates repository (aggregate root)', () => {
     createdEstimateIds.push(estimate.id);
 
     expect(estimate.clientId).toBe(testClientId);
+    expect(estimate.projectName).toBe('Spring Brand Refresh');
     expect(estimate.status).toBe('sent');
     expect(estimate.taxRateBasisPoints).toBe(825);
     expect(estimate.discountType).toBe('percentage');
@@ -121,13 +123,27 @@ describe('estimates repository (aggregate root)', () => {
     expect(updated?.lineItems).toHaveLength(2);
   });
 
+  it('renames an estimate via projectName (round-trips; line items untouched)', async () => {
+    const estimateId = createdEstimateIds[0] as number;
+    const renamed = await updateEstimate(estimateId, {
+      projectName: 'Renamed Project',
+    });
+    expect(renamed?.projectName).toBe('Renamed Project');
+    expect(renamed?.lineItems).toHaveLength(2);
+
+    // restore the original name so later assertions in this file can rely on it
+    await updateEstimate(estimateId, { projectName: 'Spring Brand Refresh' });
+  });
+
   it('creates a second estimate to exercise listEstimates filters', async () => {
     const estimate = await createEstimate({
       clientId: testClientId,
+      projectName: 'Q3 Social Campaign',
       status: 'sent',
       taxRateBasisPoints: 0,
     });
     createdEstimateIds.push(estimate.id);
+    expect(estimate.projectName).toBe('Q3 Social Campaign');
     expect(estimate.lineItems).toEqual([]); // no line items provided → empty, not error
   });
 

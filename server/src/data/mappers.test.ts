@@ -51,6 +51,7 @@ describe('mapEstimateRow', () => {
       mapEstimateRow({
         id: 7,
         client_id: 1,
+        project_name: 'Spring Brand Refresh',
         status: 'sent',
         tax_rate_basis_points: 825,
         discount_type: 'percentage',
@@ -61,6 +62,7 @@ describe('mapEstimateRow', () => {
     ).toEqual({
       id: 7,
       clientId: 1,
+      projectName: 'Spring Brand Refresh',
       status: 'sent',
       taxRateBasisPoints: 825,
       discountType: 'percentage',
@@ -76,6 +78,7 @@ describe('mapEstimateRow', () => {
     const mapped = mapEstimateRow({
       id: 8,
       client_id: 1,
+      project_name: 'Q3 Social Campaign',
       status: 'draft',
       tax_rate_basis_points: 0,
       discount_type: null,
@@ -83,6 +86,7 @@ describe('mapEstimateRow', () => {
       created_at: createdAt,
       updated_at: updatedAt,
     });
+    expect(mapped.projectName).toBe('Q3 Social Campaign');
     expect(mapped.discountType).toBeNull();
     expect(mapped.discountValue).toBeNull();
     expect(mapped.status).toBe('draft');

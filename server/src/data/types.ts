@@ -27,6 +27,7 @@ export interface LineItem {
 export interface Estimate {
   id: number;
   clientId: number;
+  projectName: string;
   status: EstimateStatus;
   taxRateBasisPoints: number;
   /** null when the estimate has no discount */
@@ -61,6 +62,7 @@ export interface LineItemRow {
 export interface EstimateRow {
   id: number;
   client_id: number;
+  project_name: string;
   status: EstimateStatus;
   tax_rate_basis_points: number;
   discount_type: DiscountType | null;
@@ -87,6 +89,7 @@ export type UpdateLineItemInput = Partial<CreateLineItemInput>;
 
 export interface CreateEstimateInput {
   clientId: number;
+  projectName: string;
   status?: EstimateStatus; // default 'draft'
   taxRateBasisPoints?: number; // default 0
   discountType?: DiscountType | null; // default null
@@ -96,6 +99,7 @@ export interface CreateEstimateInput {
 
 export interface UpdateEstimateInput {
   clientId?: number;
+  projectName?: string;
   status?: EstimateStatus;
   taxRateBasisPoints?: number;
   discountType?: DiscountType | null; // pass null to clear the discount

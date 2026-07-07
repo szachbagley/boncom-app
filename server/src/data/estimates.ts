@@ -29,6 +29,7 @@ export async function createEstimate(
   const id = await db.transaction(async (trx) => {
     const [estimateId] = await trx<EstimateRow>('estimates').insert({
       client_id: input.clientId,
+      project_name: input.projectName,
       status: input.status ?? 'draft',
       tax_rate_basis_points: input.taxRateBasisPoints ?? 0,
       discount_type: input.discountType ?? null,
@@ -90,6 +91,9 @@ export async function updateEstimate(
   const update: Partial<EstimateRow> = {};
   if (patch.clientId !== undefined) {
     update.client_id = patch.clientId;
+  }
+  if (patch.projectName !== undefined) {
+    update.project_name = patch.projectName;
   }
   if (patch.status !== undefined) {
     update.status = patch.status;
